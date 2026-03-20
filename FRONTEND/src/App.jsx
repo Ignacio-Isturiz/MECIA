@@ -1,11 +1,13 @@
+import { RouterProvider } from 'react-router-dom';
+import router from './router';
+import './App.css';
+
+/**
+ * Componente principal de la aplicación MECIA
+ * Configura React Router y proporciona las rutas
+ */
 function App() {
-  return (
-    <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-      <h1 className="text-5xl font-bold text-white">
-        Hola Mundo
-      </h1>
-    </div>
-  )
+  return <RouterProvider router={router} />;
 }
 
 export default App

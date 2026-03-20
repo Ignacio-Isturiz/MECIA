@@ -1,4 +1,166 @@
-Landing page con inicio de sesión donde el usuario puede escoger su rol si emprendedor o ciudadano.
+# MECIA - Sistema de Información para Emprendedores y Ciudadanos en Medellín
+
+Plataforma integral que combina inteligencia artificial, análisis de datos y seguridad para emprendedores y ciudadanos en Medellín.
+
+## 🏗️ Arquitectura del Proyecto
+
+### Backend (FastAPI)
+- ✅ API REST con autenticación JWT
+- ✅ Arquitectura profesional (SOLID)
+- ✅ Base de datos con SQLAlchemy
+- ✅ Sistema de roles (Emprendedor/Ciudadano)
+
+### Frontend (React + Vite)
+- ✅ Componentes de autenticación (wireframes)
+- ✅ Rutas protegidas
+- ✅ Integración con API
+- ✅ Estructura lista para development
+
+## 🎯 Funcionalidades
+
+### ✅ Sistema de Autenticación (COMPLETADO)
+
+**Backend:**
+- Registro de usuarios
+- Login/Logout con JWT
+- Recuperación de contraseña
+- Tokens de acceso y refresh
+- Validación de datos con Pydantic
+
+**Frontend:**
+- Formularios de autenticación (wireframes)
+- Rutas protegidas automáticas
+- Servicio de autenticación
+- Integración con API
+
+### 👨‍💼 EMPRENDEDOR - Funcionalidades Planeadas
+
+1. **Chatbot de Clasificación**
+   - Análisis de tipo de negocio
+   - Diccionario de palabras para validar queries
+   - Feedback personalizado
+
+2. **Recomendación de Zonas**
+   - Mapa interactivo de Medellín
+   - Análisis de seguridad por zona
+   - Información de servicios disponibles
+   - Comparativa con negocios similares
+
+3. **Dashboard de Datos**
+   - Gráficas de seguridad
+   - Información de competencia
+   - Análisis de viabilidad
+   - Datos de servicios e infraestructura
+
+### 👥 CIUDADANO - Funcionalidades Planeadas
+
+1. **Feed de Noticias**
+   - Novedades de Medellín
+   - Alertas de seguridad
+   - Información local
+
+2. **Chatbot de Seguridad**
+   - Recomendaciones personalizadas
+   - Análisis de zona antes de salir
+   - Rutas seguras
+
+3. **Módulo de Servicios**
+   - Facturación actual
+   - Análisis de gastos históricos
+   - Predicciones de consumo
+
+4. **Módulo de Seguridad**
+   - Información por zona
+   - Mapas de seguridad
+   - Recomendaciones
+
+5. **Premium Features**
+   - Historial de conversaciones
+   - Integración con Telegram Bot
+   - Audio para discapacidad visual
+   - Recordar contexto de chats
+
+## 🚀 Inicio Rápido
+
+### Backend
+
+```bash
+cd BACKEND
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+uvicorn app.main:app --reload
+```
+
+**API en:** http://localhost:8000
+**Docs:** http://localhost:8000/api/docs
+
+### Frontend
+
+```bash
+cd FRONTEND
+npm install
+cp .env.example .env.local
+npm run dev
+```
+
+**Frontend en:** http://localhost:5173
+
+## 📋 Endpoints Principales
+
+```
+POST   /api/auth/register              # Registro
+POST   /api/auth/login                 # Login
+POST   /api/auth/refresh               # Renovar token
+GET    /api/auth/me                    # Usuario actual
+POST   /api/auth/password-reset-request # Reset contraseña
+POST   /api/auth/password-reset-confirm # Confirmar reset
+```
+
+## 🔐 Autenticación
+
+1. Usuario se registra o inicia sesión
+2. Recibe `access_token` y `refresh_token`  
+3. Envía token en header: `Authorization: Bearer <token>`
+4. Si expira, usa refresh para obtener uno nuevo
+
+## 🎨 Stack Tecnológico
+
+**Backend:**
+- FastAPI, SQLAlchemy, Pydantic, PyJWT, Passlib
+
+**Frontend:**
+- React 18, Vite, React Router, Tailwind CSS
+
+## 👥 Roles
+
+| Rol | Acceso |
+|-----|--------|
+| **EMPRENDEDOR** | Dashboard de emprendedor, Chatbot, Mapas, Análisis |
+| **CIUDADANO** | Dashboard ciudadano, Noticias, Chatbot seguridad |
+
+## 📚 Documentación
+
+- [Backend](./BACKEND/README.md) - API y arquitectura
+- [Frontend](./FRONTEND/README.md) - Componentes y rutas
+
+## 🗺️ Estado del Proyecto
+
+```
+✅ Autenticación JWT completa
+✅ Base de datos con roles
+✅ Frontend con wireframes
+🚧 Estilos UI/UX
+🚧 Chatbot integración IA
+🚧 Mapas interactivos
+🚧 Análisis de datos
+🚧 Email service
+```
+
+---
+
+**MECIA - Emprendimiento Seguro para Medellín** 🚀
 
 EMPRENDEDOR:
 Se abrirá un chatbot. El chatbot mostrará un ejemplo de como puede ser el prompt, depende del prompt hará una clasificación del negocio. Ejemplo:
