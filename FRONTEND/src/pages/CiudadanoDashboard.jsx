@@ -4,6 +4,8 @@
 import { useEffect, useState } from 'react';
 import authService from '@/services/authService';
 import { useNavigate } from 'react-router-dom';
+import CriminalidadDashboard from '@/components/CriminalidadDashboard';
+import CitizenNewsSection from '@/components/CitizenNewsSection';
 
 /**
  * Dashboard de Ciudadano
@@ -69,10 +71,7 @@ export default function CiudadanoDashboard() {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-        <div style={{ border: '1px solid #ccc', padding: '1rem' }}>
-          <h2>Noticias de Medellín</h2>
-          <p>TODO: Agregar feed de noticias locales</p>
-        </div>
+        <CitizenNewsSection />
 
         <div style={{ border: '1px solid #ccc', padding: '1rem' }}>
           <h2>Chatbot de Seguridad</h2>
@@ -85,8 +84,8 @@ export default function CiudadanoDashboard() {
         </div>
 
         <div style={{ border: '1px solid #ccc', padding: '1rem' }}>
-          <h2>Módulo de Seguridad</h2>
-          <p>TODO: Agregar información de seguridad por zona</p>
+          <h2 style={{ marginTop: 0 }}>Módulo de Seguridad</h2>
+          <CriminalidadDashboard />
         </div>
       </div>
 
@@ -99,6 +98,7 @@ export default function CiudadanoDashboard() {
         <h2>Historial de Conversaciones</h2>
         <p>TODO: Agregar vista del historial de chats</p>
       </div>
+
     </div>
   );
 }

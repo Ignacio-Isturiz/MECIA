@@ -37,6 +37,10 @@ class Settings(BaseSettings):
     
     # Configuración de CORS para frontend
     FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:5173")
+
+    # Configuración de NewsAPI
+    NEWS_API_KEY: str = os.getenv("NEWS_API_KEY", "")
+    NEWS_API_BASE_URL: str = os.getenv("NEWS_API_BASE_URL", "https://newsapi.org/v2")
     
     # Validación de email
     EMAIL_RESET_TOKEN_EXPIRE_HOURS: int = 24

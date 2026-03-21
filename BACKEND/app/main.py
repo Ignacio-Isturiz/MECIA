@@ -9,7 +9,7 @@ import logging
 
 from app.core.config import get_settings
 from app.core.database import init_db
-from app.routers import auth
+from app.routers import auth, datasets, news, llm
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
@@ -56,6 +56,9 @@ async def startup_event():
 
 # Incluir routers
 app.include_router(auth.router)
+app.include_router(datasets.router)
+app.include_router(news.router)
+app.include_router(llm.router)
 
 
 # Health check
