@@ -2,6 +2,34 @@
 
 Plataforma integral que combina inteligencia artificial, análisis de datos y seguridad para emprendedores y ciudadanos en Medellín.
 
+## 🚀 Inicio Rápido con Docker
+
+Para facilitar la configuración, el proyecto incluye configuración Docker completa.
+
+1. **Clona el repositorio y configura:**
+   ```bash
+   git clone <url-del-repositorio>
+   cd MECIA
+   cp DOCKER/.env.example .env
+   # Edita .env con tus claves API
+   ```
+
+2. **Ejecuta con Docker:**
+   ```bash
+   ./setup.sh
+   ```
+   O para desarrollo con hot reload automático:
+   ```bash
+   cd DOCKER
+   docker-compose -f docker-compose.dev.yml up
+   ```
+
+3. **Accede a la aplicación:**
+   - Frontend: http://localhost:3000
+   - API Docs: http://localhost:8000/docs
+
+Ver [DOCKER/README.md](DOCKER/README.md) para la estructura Docker, [DOCKER/MODES.md](DOCKER/MODES.md) para modos de desarrollo, y [DOCKER/DOCKER_README.md](DOCKER/DOCKER_README.md) para instrucciones detalladas.
+
 ## 🏗️ Arquitectura del Proyecto
 
 ### Backend (FastAPI)
