@@ -1,6 +1,6 @@
 import { RouterProvider } from 'react-router-dom';
 import router from './router';
-import './App.css';
+import './index.css';
 
 /**
  * Componente principal de la aplicación MECIA
@@ -9,5 +9,4 @@ import './App.css';
 function App() {
   return <RouterProvider router={router} />;
 }
-
 export default App
