@@ -5,6 +5,8 @@ services:
     build:
       context: ../BACKEND
       dockerfile: Dockerfile
+    env_file:
+      - ../BACKEND/.env
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - SECRET_KEY=${SECRET_KEY:-tu-clave-secreta-super-segura-en-produccion-cambiar-esto}
