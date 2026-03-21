@@ -5,9 +5,20 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 gsap.registerPlugin(ScrollTrigger);
 
 export function initLandingPageAnimation(container) {
-  if (!container) return () => {};
-
   const html = document.documentElement;
+
+  /* ══ TOP-LEVEL REVEAL ══ */
+  const heroEls = container.querySelectorAll('#hl, #htitle, #hsub, #hbtns, #hdash');
+  const nav = container.querySelector('#nav');
+  
+  if (nav) gsap.from(nav, { y: -70, opacity: 0, duration: .7, ease: 'power3.out' });
+  if (heroEls.length) {
+    gsap.fromTo(heroEls, 
+      { opacity: 0, y: 32 },
+      { opacity: 1, y: 0, duration: .9, ease: 'power3.out', stagger: 0.1, delay: 0.2 }
+    );
+  }
+  gsap.from(container.querySelectorAll('.hero-aura, .orb'), { scale: .4, opacity: 0, duration: 2.4, ease: 'power2.out', delay: .1, stagger: .1 });
 
   /* ══════════════════════════════════════
      WEBGL — MEDELLÍN CITY GRID SIMULATION
@@ -20,8 +31,8 @@ export function initLandingPageAnimation(container) {
   let pulseData = [];
 
   if (canvas) {
-    renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: false });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     renderer.setSize(window.innerWidth, window.innerHeight);
 
     scene = new THREE.Scene();
@@ -44,17 +55,21 @@ export function initLandingPageAnimation(container) {
       transparent: true, opacity: 0.55,
       blending: THREE.AdditiveBlending, depthWrite: false
     });
+    
+    console.log('[MECIA] Creating street geometries');
+    const streetPts = [];
+    const avePts = [];
 
     const nsCount = 14;
     for (let i = 0; i < nsCount; i++) {
       const x = (i / (nsCount - 1) - 0.5) * valleyW;
-      const valleyFactor = Math.sqrt(1 - Math.pow(x / (valleyW * 0.6), 2));
+      const valleyFactor = Math.sqrt(Math.max(0, 1 - Math.pow(x / (valleyW * 0.6), 2)));
       const len = valleyL * valleyFactor;
       if (len < 2) continue;
-      const pts = [new THREE.Vector3(x, 0, -len / 2), new THREE.Vector3(x, 0, len / 2)];
-      const geo = new THREE.BufferGeometry().setFromPoints(pts);
+      
       const isMajor = i === Math.floor(nsCount / 2);
-      scene.add(new THREE.Line(geo, isMajor ? aveMat : streetMat));
+      const target = isMajor ? avePts : streetPts;
+      target.push(new THREE.Vector3(x, 0, -len / 2), new THREE.Vector3(x, 0, len / 2));
     }
 
     const ewCount = 32;
@@ -63,10 +78,20 @@ export function initLandingPageAnimation(container) {
       const valleyFactor = Math.max(0, 1 - Math.pow(z / (valleyL * 0.5), 2));
       const w = valleyW * Math.sqrt(valleyFactor) * 0.95;
       if (w < 0.5) continue;
-      const pts = [new THREE.Vector3(-w / 2, 0, z), new THREE.Vector3(w / 2, 0, z)];
-      const geo = new THREE.BufferGeometry().setFromPoints(pts);
+      
       const isMajor = j % 6 === 0;
-      scene.add(new THREE.Line(geo, isMajor ? aveMat : streetMat));
+      const target = isMajor ? avePts : streetPts;
+      target.push(new THREE.Vector3(-w / 2, 0, z), new THREE.Vector3(w / 2, 0, z));
+    }
+
+    console.log('[MECIA] Compiling grid geometries');
+    if (streetPts.length) {
+      const g = new THREE.BufferGeometry().setFromPoints(streetPts);
+      scene.add(new THREE.LineSegments(g, streetMat));
+    }
+    if (avePts.length) {
+      const g = new THREE.BufferGeometry().setFromPoints(avePts);
+      scene.add(new THREE.LineSegments(g, aveMat));
     }
 
     const nodePositions = [];
@@ -92,10 +117,11 @@ export function initLandingPageAnimation(container) {
     });
     scene.add(new THREE.Points(centerGeo, centerMat));
 
-    // ✅ Assign to outer pulseData (no const/let here)
-    const PULSES = 28;
+    console.log('[MECIA] Initializing pulses');
+    const PULSES = 8;
     const pulsePositions = new Float32Array(PULSES * 3);
     for (let i = 0; i < PULSES; i++) {
+      console.log('[MECIA] pulse loop iteration:', i);
       const isNS = Math.random() > 0.5;
       if (isNS) {
         const x = (Math.floor(Math.random() * nsCount) / (nsCount - 1) - 0.5) * valleyW;
@@ -109,6 +135,7 @@ export function initLandingPageAnimation(container) {
         pulseData.push({ type: 'ew', z, xMin: -w / 2, xMax: w / 2, x: Math.random() * w - w / 2, speed: (Math.random() * .04 + .015) * (Math.random() > .5 ? 1 : -1) });
       }
     }
+    console.log('[MECIA] pulse loop complete');
 
     const pulseGeo = new THREE.BufferGeometry();
     pulseGeo.setAttribute('position', new THREE.BufferAttribute(pulsePositions, 3));
@@ -118,23 +145,10 @@ export function initLandingPageAnimation(container) {
       blending: THREE.AdditiveBlending, depthWrite: false
     });
     const pulseSystem = new THREE.Points(pulseGeo, pulseMat);
-    scene.add(pulseSystem);
-
-    const AMBIENT = 600;
-    const ambPos = new Float32Array(AMBIENT * 3);
-    for (let i = 0; i < AMBIENT; i++) {
-      ambPos[i * 3] = (Math.random() - .5) * 25;
-      ambPos[i * 3 + 1] = (Math.random() - .5) * 8;
-      ambPos[i * 3 + 2] = (Math.random() - .5) * 30;
-    }
-    const ambGeo = new THREE.BufferGeometry();
-    ambGeo.setAttribute('position', new THREE.BufferAttribute(ambPos, 3));
-    const ambMat = new THREE.PointsMaterial({
-      color: 0x00C896, size: .025, sizeAttenuation: true,
-      transparent: true, opacity: .22,
-      blending: THREE.AdditiveBlending, depthWrite: false
-    });
-    scene.add(new THREE.Points(ambGeo, ambMat));
+    // Save refs for the loop to avoid expensive lookups every frame
+    const refs = { pulseSystem, pulseGeo, pulseMat, centerMat };
+    console.log('[MECIA] refs created, scheduling animate');
+    if (canvas) setTimeout(() => animate(refs), 100);
   }
 
   const mouse = { x: 0, y: 0, tx: 0, ty: 0 };
@@ -149,14 +163,17 @@ export function initLandingPageAnimation(container) {
       cam.aspect = window.innerWidth / window.innerHeight;
       cam.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
+      console.log('[MECIA] Resize handled');
     }
   };
   window.addEventListener('resize', onResize);
 
   let t = 0;
-  function animate() {
-    animationFrameId = requestAnimationFrame(animate);
+  function animate(refs) {
+    animationFrameId = requestAnimationFrame(() => animate(refs));
+    // Simplified guard: only check if core Three.js objects exist
     if (!renderer || !scene || !cam) return;
+    if (t === 0) console.log('[MECIA] animate loop started');
     t += 0.008;
 
     mouse.x += (mouse.tx - mouse.x) * 0.04;
@@ -167,9 +184,8 @@ export function initLandingPageAnimation(container) {
     cam.position.y = 14 + mouse.y * 3 + Math.sin(t * 0.04) * 1;
     cam.lookAt(0, 0, 0);
 
-    const pulseGeo = scene.children.find(c => c.type === 'Points' && c.material.color?.getHex() === 0x4dffd0)?.geometry;
-    if (pulseGeo && pulseData.length > 0) {
-      const pos = pulseGeo.attributes.position.array;
+    if (refs && refs.pulseGeo && pulseData.length > 0) {
+      const pos = refs.pulseGeo.attributes.position.array;
       const PULSES = pulseData.length;
       for (let i = 0; i < PULSES; i++) {
         const p = pulseData[i];
@@ -183,19 +199,14 @@ export function initLandingPageAnimation(container) {
           pos[i * 3] = p.x; pos[i * 3 + 1] = 0.05; pos[i * 3 + 2] = p.z;
         }
       }
-      pulseGeo.attributes.position.needsUpdate = true;
+      refs.pulseGeo.attributes.position.needsUpdate = true;
     }
 
-    const pMat = scene.children.find(c => c.type === 'Points' && c.material.color?.getHex() === 0x4dffd0)?.material;
-    if (pMat) pMat.opacity = 0.7 + Math.sin(t * 3) * 0.15;
-
-    const cMat = scene.children.find(c => c.geometry?.attributes?.position?.array?.length === 3)?.material;
-    if (cMat) cMat.size = 0.5 + Math.sin(t * 2.5) * 0.15;
+    if (refs && refs.pulseMat) refs.pulseMat.opacity = 0.7 + Math.sin(t * 3) * 0.15;
+    if (refs && refs.centerMat) refs.centerMat.size = 0.5 + Math.sin(t * 2.5) * 0.15;
 
     renderer.render(scene, cam);
   }
-
-  if (canvas) animate();
 
   /* ══ THEME ══ */
   const themeBtn = container.querySelector('#theme-btn');
@@ -206,17 +217,19 @@ export function initLandingPageAnimation(container) {
   if (themeBtn) themeBtn.addEventListener('click', onThemeToggle);
 
   /* ══ NAVBAR HIDE/SHOW ══ */
-  let lastY = 0;
-  ScrollTrigger.create({
-    start: 'top top',
-    end: 'max',
-    onUpdate(s) {
-      const y = s.scroll();
-      const nav = container.querySelector('#nav');
-      if (nav) gsap.to(nav, { yPercent: (y > lastY && y > 80) ? -110 : 0, duration: .3, ease: 'power2.inOut' });
-      lastY = y;
-    }
-  });
+  if (nav) {
+    ScrollTrigger.create({
+      trigger: 'body',
+      start: 'top -80',
+      onToggle: self => {
+        if (self.isActive && self.direction === 1) {
+          gsap.to(nav, { yPercent: -110, duration: 0.3, ease: 'power2.inOut', overwrite: true });
+        } else {
+          gsap.to(nav, { yPercent: 0, duration: 0.3, ease: 'power2.inOut', overwrite: true });
+        }
+      }
+    });
+  }
 
   const navLinks = container.querySelectorAll('.nav-links a');
   const onNavLinkClick = function () {
@@ -227,14 +240,6 @@ export function initLandingPageAnimation(container) {
   navLinks.forEach(a => a.addEventListener('click', onNavLinkClick));
 
   /* ══ HERO ENTRANCE ══ */
-  gsap.from(container.querySelector('#nav'), { y: -70, opacity: 0, duration: .7, ease: 'power3.out' });
-  gsap.from(container.querySelectorAll('.hero-aura, .orb'), { scale: .4, opacity: 0, duration: 2.4, ease: 'power2.out', delay: .1, stagger: .1 });
-
-  const heroEls = container.querySelectorAll('#hl, #htitle, #hsub, #hbtns, #hdash');
-  if (heroEls.length) {
-    gsap.set(heroEls, { opacity: 0, y: 32 });
-    gsap.to(heroEls, { opacity: 1, y: 0, duration: .9, ease: 'power3.out', stagger: .13, delay: .55 });
-  }
 
   gsap.from(container.querySelectorAll('.curve-circle'), { scale: 0, opacity: 0, duration: .8, ease: 'back.out(2.5)', delay: 1.6 });
 
@@ -297,6 +302,7 @@ export function initLandingPageAnimation(container) {
     ['.faq-it', '.faq-list', .07],
     ['.footer-card', '.footer-shell', 0],
   ];
+  console.log('[MECIA] Animating revTargets');
   revTargets.forEach(([sel, trig, stag]) => {
     const elements = container.querySelectorAll(sel);
     const triggerEl = container.querySelector(trig);
@@ -343,29 +349,42 @@ export function initLandingPageAnimation(container) {
   /* ══ 3D CARD TILT ══ */
   const onCardMouseMove = function (e) {
     const r = this.getBoundingClientRect();
-    gsap.to(this, { rotateY: ((e.clientX - r.left) / r.width - .5) * 10, rotateX: ((e.clientY - r.top) / r.height - .5) * -10, transformPerspective: 800, duration: .32, ease: 'power2.out' });
+    gsap.to(this, { 
+      rotateY: ((e.clientX - r.left) / r.width - .5) * 10, 
+      rotateX: ((e.clientY - r.top) / r.height - .5) * -10, 
+      transformPerspective: 800, 
+      duration: .4, 
+      ease: 'power2.out',
+      overwrite: true
+    });
   };
-  const onCardMouseLeave = function () { gsap.to(this, { rotateY: 0, rotateX: 0, duration: .5, ease: 'power2.out' }); };
+  const onCardMouseLeave = function () { gsap.to(this, { rotateY: 0, rotateX: 0, duration: .5, ease: 'power2.out', overwrite: true }); };
   container.querySelectorAll('.fcard,.caso,.svc,.ins,.blog-h,.blog-s').forEach(card => {
     card.addEventListener('mousemove', onCardMouseMove);
     card.addEventListener('mouseleave', onCardMouseLeave);
   });
 
   /* ══ MAGNETIC BUTTONS ══ */
-  const onBtnMouseMove = function (e) {
-    const r = this.getBoundingClientRect();
-    gsap.to(this, { x: (e.clientX - r.left - r.width / 2) * .22, y: (e.clientY - r.top - r.height / 2) * .22, duration: .24, ease: 'power2.out' });
-  };
-  const onBtnMouseLeave = function () { gsap.to(this, { x: 0, y: 0, duration: .5, ease: 'elastic.out(1,.5)' }); };
-  const onBtnClick = function (e) {
-    const s = document.createElement('span'), r = this.getBoundingClientRect();
-    Object.assign(s.style, { position: 'absolute', borderRadius: '50%', background: 'rgba(5,8,16,.18)', transform: 'scale(0)', pointerEvents: 'none', width: '70px', height: '70px', left: (e.clientX - r.left - 35) + 'px', top: (e.clientY - r.top - 35) + 'px' });
-    this.appendChild(s);
-    gsap.to(s, { scale: 4, opacity: 0, duration: .55, ease: 'power2.out', onComplete: () => s.remove() });
-  };
   container.querySelectorAll('.btn-g,.btn-outline').forEach(btn => {
-    btn.addEventListener('mousemove', onBtnMouseMove);
-    btn.addEventListener('mouseleave', onBtnMouseLeave);
+    const xTo = gsap.quickTo(btn, "x", { duration: 0.24, ease: 'power2.out' });
+    const yTo = gsap.quickTo(btn, "y", { duration: 0.24, ease: 'power2.out' });
+
+    btn.addEventListener('mousemove', (e) => {
+      const r = btn.getBoundingClientRect();
+      xTo((e.clientX - r.left - r.width / 2) * .22);
+      yTo((e.clientY - r.top - r.height / 2) * .22);
+    });
+    btn.addEventListener('mouseleave', () => {
+      gsap.to(btn, { x: 0, y: 0, duration: 0.5, ease: 'elastic.out(1,.5)', overwrite: true });
+    });
+    
+    const onBtnClick = function (e) {
+      const s = document.createElement('span'), r = this.getBoundingClientRect();
+      Object.assign(s.style, { position: 'absolute', borderRadius: '50%', background: 'rgba(5,8,16,.18)', transform: 'scale(0)', pointerEvents: 'none', width: '70px', height: '70px', left: (e.clientX - r.left - 35) + 'px', top: (e.clientY - r.top - 35) + 'px' });
+      this.appendChild(s);
+      gsap.to(s, { scale: 4, opacity: 0, duration: .55, ease: 'power2.out', onComplete: () => s.remove() });
+    };
+    
     btn.addEventListener('click', onBtnClick);
   });
 
@@ -399,11 +418,16 @@ export function initLandingPageAnimation(container) {
     alert('Reemplaza con tu URL de video.');
   });
 
-  return () => {
+  const cleanup = () => {
     cancelAnimationFrame(animationFrameId);
     window.removeEventListener('mousemove', onMouseMove);
     window.removeEventListener('resize', onResize);
     ScrollTrigger.getAll().forEach(t => t.kill());
     if (renderer) renderer.dispose();
   };
+
+  // Ensure ScrollTrigger recalculates after everything is setup
+  setTimeout(() => ScrollTrigger.refresh(), 500);
+
+  return cleanup;
 }

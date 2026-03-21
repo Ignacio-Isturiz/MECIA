@@ -1,17 +1,15 @@
-// src/router/index.jsx
-// Configuración de rutas de la aplicación
-
 import { createBrowserRouter } from 'react-router-dom';
 import { ProtectedRoute } from '@/components/auth';
-
-// Páginas
-import HomePage from '@/pages/HomePage';
-import LoginPage from '@/pages/LoginPage';
-import RegisterPage from '@/pages/RegisterPage';
-import ForgotPasswordPage from '@/pages/ForgotPasswordPage';
-import ResetPasswordPage from '@/pages/ResetPasswordPage';
-import EmprendedorDashboard from '@/pages/EmprendedorDashboard';
-import CiudadanoDashboard from '@/pages/CiudadanoDashboard';
+import { PageLoader, LazyRoute } from '@/components/common/RouteLoading';
+import { 
+  HomePage, 
+  LoginPage, 
+  RegisterPage, 
+  ForgotPasswordPage, 
+  ResetPasswordPage, 
+  EmprendedorDashboard, 
+  CiudadanoDashboard 
+} from './lazyComponents';
 
 /**
  * Configuración de rutas
@@ -23,25 +21,25 @@ export const router = createBrowserRouter([
   // Ruta inicial - Home
   {
     path: '/',
-    element: <HomePage />
+    element: <LazyRoute element={<HomePage />} />
   },
 
   // Rutas públicas de autenticación
   {
     path: '/login',
-    element: <LoginPage />
+    element: <LazyRoute element={<LoginPage />} />
   },
   {
     path: '/register',
-    element: <RegisterPage />
+    element: <LazyRoute element={<RegisterPage />} />
   },
   {
     path: '/forgot-password',
-    element: <ForgotPasswordPage />
+    element: <LazyRoute element={<ForgotPasswordPage />} />
   },
   {
     path: '/reset-password',
-    element: <ResetPasswordPage />
+    element: <LazyRoute element={<ResetPasswordPage />} />
   },
 
   // Rutas protegidas para emprendedor
@@ -49,7 +47,7 @@ export const router = createBrowserRouter([
     path: '/emprendedor/dashboard',
     element: (
       <ProtectedRoute>
-        <EmprendedorDashboard />
+        <LazyRoute element={<EmprendedorDashboard />} />
       </ProtectedRoute>
     )
   },
@@ -59,7 +57,7 @@ export const router = createBrowserRouter([
     path: '/ciudadano/dashboard',
     element: (
       <ProtectedRoute>
-        <CiudadanoDashboard />
+        <LazyRoute element={<CiudadanoDashboard />} />
       </ProtectedRoute>
     )
   }
