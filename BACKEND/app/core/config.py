@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     DEBUG: bool = os.getenv("DEBUG", "False").lower() == "true"
     
     # Configuración de base de datos
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./mecia.db")
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql://mecia_user:mecia_password@db:5432/mecia")
     
     # Configuración JWT (tokens de seguridad)
     SECRET_KEY: str = os.getenv(
