@@ -4,6 +4,9 @@
 import { useEffect, useState } from 'react';
 import authService from '@/services/authService';
 import { useNavigate } from 'react-router-dom';
+import EmprendedorInsightsDashboard from '@/components/EmprendedorInsightsDashboard';
+import NegociosCoberturaSection from '@/components/NegociosCoberturaSection';
+import NegociosCercanosSection from '@/components/NegociosCercanosSection';
 
 /**
  * Dashboard de Emprendedor
@@ -80,12 +83,16 @@ export default function EmprendedorDashboard() {
 
       <div style={{ border: '1px solid #ccc', padding: '1rem', marginBottom: '1rem' }}>
         <h2>Análisis de Datos</h2>
-        <p>TODO: Agregar gráficas con información de seguridad y servicios</p>
+        <NegociosCoberturaSection />
       </div>
 
       <div style={{ border: '1px solid #ccc', padding: '1rem' }}>
         <h2>Información de Negocios Cercanos</h2>
-        <p>TODO: Agregar información de negocios similares en la zona</p>
+        <NegociosCercanosSection />
+      </div>
+
+      <div style={{ marginTop: '2rem' }}>
+        <EmprendedorInsightsDashboard />
       </div>
     </div>
   );
