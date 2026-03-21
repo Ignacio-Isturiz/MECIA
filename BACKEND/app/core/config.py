@@ -41,6 +41,12 @@ class Settings(BaseSettings):
     # Configuración de NewsAPI
     NEWS_API_KEY: str = os.getenv("NEWS_API_KEY", "")
     NEWS_API_BASE_URL: str = os.getenv("NEWS_API_BASE_URL", "https://newsapi.org/v2")
+
+    # Configuración de LLM real
+    OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
+    GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
+    # "openai" | "gemini" | "mock"
+    LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "openai")
     
     # Validación de email
     EMAIL_RESET_TOKEN_EXPIRE_HOURS: int = 24

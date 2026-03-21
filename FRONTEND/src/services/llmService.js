@@ -28,4 +28,27 @@ export const llmService = {
     if (!response.ok) throw new Error(`Error ${response.status}: ${response.statusText}`);
     return response.json();
   },
+
+  async securityChat({ prompt }) {
+    const response = await fetch(`${API_CONFIG.baseURL}/api/llm/seguridad/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt }),
+    });
+
+    if (!response.ok) throw new Error(`Error ${response.status}: ${response.statusText}`);
+    return response.json();
+  },
+
+  async analyzeFactura(imageFiles) {
+    const formData = new FormData();
+    const files = Array.isArray(imageFiles) ? imageFiles : [imageFiles];
+    files.forEach((file) => formData.append("files", file));
+    const response = await fetch(`${API_CONFIG.baseURL}/api/llm/facturas/analizar`, {
+      method: "POST",
+      body: formData,
+    });
+    if (!response.ok) throw new Error(`Error ${response.status}: ${response.statusText}`);
+    return response.json();
+  },
 };
