@@ -8,9 +8,6 @@ import { TrustedLogos, StatsStrip } from '@/components/landing/TrustedStats';
 import Features from '@/components/landing/Features';
 import UseCases from '@/components/landing/UseCases';
 import Services from '@/components/landing/Services';
-import VideoSection from '@/components/landing/VideoSection';
-import Insights from '@/components/landing/Insights';
-import Blog from '@/components/landing/Blog';
 import FAQ from '@/components/landing/FAQ';
 import Footer from '@/components/landing/Footer';
 
@@ -81,12 +78,8 @@ export default function HomePage() {
       <Features />
       <UseCases />
       <Services />
-      <VideoSection />
-      <Insights />
-      <Blog />
       <FAQ />
       <Footer />
-
     </div>
   );
 }

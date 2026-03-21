@@ -12,6 +12,7 @@
   overflow: hidden;
   padding: 18px;
   gap: 18px;
+  padding-bottom: 0;
 }
 
 /* ── PANEL VERDE ── */
@@ -21,7 +22,7 @@
   overflow: hidden;
   display: flex;
   align-items: stretch;
-  border-radius: 18px;
+  border-radius: 18px 18px 0 0;
   /* Login: verde izquierda (order 1) */
   order: 1;
   view-transition-name: auth-panel-green;
@@ -404,4 +405,136 @@
 html::view-transition-new(root) .auth-left,
 html::view-transition-new(root) .auth-right {
   animation: none !important;
+}
+
+/* ═══════════════════════════════════════
+   TEMA TOGGLE — agregar al final de AuthPages.css
+═══════════════════════════════════════ */
+
+/* ── BOTÓN TOGGLE BASE ── */
+.auth-theme-btn {
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,.09);
+  background: rgba(255,255,255,.05);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: rgba(255,255,255,.55);
+  transition: background .2s, border-color .2s, color .2s, transform .2s;
+  flex-shrink: 0;
+}
+.auth-theme-btn:hover {
+  background: rgba(0,200,150,.10);
+  border-color: rgba(0,200,150,.28);
+  color: #00C896;
+  transform: rotate(15deg) scale(1.05);
+}
+.auth-theme-btn svg {
+  width: 15px; height: 15px;
+}
+
+/* Sol oculto en dark, visible en light */
+.auth-theme-sun { display: none; }
+.auth-theme-moon { display: block; }
+[data-theme="light"] .auth-theme-sun { display: block; }
+[data-theme="light"] .auth-theme-moon { display: none; }
+
+/* ── POSICIÓN EN PANELES SPLIT (login/register) ── */
+/* auth-right es position:relative implícito por ser un grid cell */
+.auth-right { position: relative; }
+
+.auth-theme-panel-btn {
+  position: absolute;
+  top: 20px;
+}
+/* Login: formulario a la derecha → botón top-right */
+.auth-theme-panel-btn--right { right: 20px; }
+/* Register: formulario a la izquierda → botón top-left */
+.auth-theme-panel-btn--left  { left: 20px; }
+
+/* ── POSICIÓN EN CARDS (forgot/reset) ── */
+.auth-reset-layout { position: relative; }
+.auth-theme-card-btn {
+  position: absolute;
+  top: 24px; right: 24px;
+  z-index: 10;
+}
+
+/* ═══════════════════════════════════════
+   LIGHT MODE — overrides para auth pages
+   (las variables del :root ya manejan
+    la landing, aquí ajustamos auth)
+═══════════════════════════════════════ */
+[data-theme="light"] .auth-layout,
+[data-theme="light"] .auth-right {
+  background: #F0F4F8;
+}
+[data-theme="light"] .auth-left {
+  background: #021a0a;  /* el panel verde siempre oscuro */
+}
+[data-theme="light"] .auth-form-title { color: #0F172A; }
+[data-theme="light"] .auth-form-subtitle { color: rgba(15,23,42,.5); }
+[data-theme="light"] .auth-social-btn {
+  background: #fff;
+  border-color: rgba(15,23,42,.10);
+  color: #0F172A;
+}
+[data-theme="light"] .auth-social-btn:hover {
+  background: #f1f5f9;
+  border-color: rgba(0,153,112,.28);
+}
+[data-theme="light"] .auth-divider { color: rgba(15,23,42,.28); }
+[data-theme="light"] .auth-divider::before,
+[data-theme="light"] .auth-divider::after { background: rgba(15,23,42,.10); }
+[data-theme="light"] .auth-form-wrap input[type="text"],
+[data-theme="light"] .auth-form-wrap input[type="email"],
+[data-theme="light"] .auth-form-wrap input[type="password"],
+[data-theme="light"] .auth-form-wrap select {
+  background: #fff;
+  border-color: rgba(15,23,42,.12);
+  color: #0F172A;
+}
+[data-theme="light"] .auth-form-wrap input::placeholder { color: rgba(15,23,42,.35); }
+[data-theme="light"] .auth-form-wrap input:focus,
+[data-theme="light"] .auth-form-wrap select:focus {
+  border-color: rgba(0,153,112,.45);
+  box-shadow: 0 0 0 3px rgba(0,153,112,.08);
+  background: rgba(0,153,112,.03);
+}
+[data-theme="light"] .auth-form-wrap label,
+[data-theme="light"] .auth-reset-card label { color: rgba(15,23,42,.62); }
+[data-theme="light"] .auth-form-wrap small { color: rgba(15,23,42,.38); }
+[data-theme="light"] .auth-form-wrap button[type="submit"] {
+  background: #0F172A; color: #fff;
+}
+[data-theme="light"] .auth-form-wrap button[type="submit"]:hover {
+  background: #009970; color: #fff;
+}
+[data-theme="light"] .auth-switch { color: rgba(15,23,42,.45); }
+[data-theme="light"] .auth-theme-btn {
+  border-color: rgba(15,23,42,.12);
+  background: rgba(15,23,42,.05);
+  color: rgba(15,23,42,.55);
+}
+[data-theme="light"] .auth-theme-btn:hover {
+  background: rgba(0,153,112,.09);
+  border-color: rgba(0,153,112,.3);
+  color: #009970;
+}
+
+/* Reset card light mode */
+[data-theme="light"] .auth-reset-layout { background: #F0F4F8; }
+[data-theme="light"] .auth-reset-card {
+  background: rgba(255,255,255,.95);
+  border-color: rgba(0,153,112,.14);
+  box-shadow: 0 24px 64px rgba(15,23,42,.10);
+}
+[data-theme="light"] .auth-reset-card input[type="password"],
+[data-theme="light"] .auth-reset-card input[type="text"],
+[data-theme="light"] .auth-reset-card input[type="email"] {
+  background: #fff; border-color: rgba(15,23,42,.12); color: #0F172A;
+}
+[data-theme="light"] .auth-reset-card input::placeholder { color: rgba(15,23,42,.32); }
+[data-theme="light"] .auth-reset-card button[type="submit"] {
+  background: #009970; color: #fff;
+  box-shadow: 0 4px 18px rgba(0,153,112,.30);
 }

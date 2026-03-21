@@ -307,18 +307,36 @@ export function initLandingPageAnimation(container) {
     const elements = container.querySelectorAll(sel);
     const triggerEl = container.querySelector(trig);
     if (elements.length && triggerEl) {
-      gsap.from(elements, {
-        opacity: 0, y: 38, scale: .96, duration: .72, stagger: stag, ease: 'power3.out',
-        scrollTrigger: { trigger: triggerEl, start: 'top 86%', once: true }
-      });
+      gsap.fromTo(elements,
+        { opacity: 0, y: 38, scale: .96 },
+        {
+          opacity: 1, y: 0, scale: 1,
+          duration: .72, stagger: stag, ease: 'power3.out',
+          scrollTrigger: {
+            trigger: triggerEl,
+            start: 'top 86%',
+            end: 'top 40%',
+            toggleActions: 'play none none reverse' // ← aparece al bajar, desaparece al subir
+          }
+        }
+      );
     }
   });
 
   container.querySelectorAll('.sh').forEach(el => {
-    gsap.from(el.children, {
-      opacity: 0, y: 22, duration: .65, stagger: .1, ease: 'power3.out',
-      scrollTrigger: { trigger: el, start: 'top 88%', once: true }
-    });
+    gsap.fromTo(el.children,
+      { opacity: 0, y: 22 },
+      {
+        opacity: 1, y: 0,
+        duration: .65, stagger: .1, ease: 'power3.out',
+        scrollTrigger: {
+          trigger: el,
+          start: 'top 88%',
+          end: 'top 45%',
+          toggleActions: 'play none none reverse'
+        }
+      }
+    );
   });
 
   container.querySelectorAll('.slot').forEach((s, i) => {

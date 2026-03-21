@@ -1,6 +1,7 @@
 // src/pages/LoginPage.jsx
 import { useNavigate, Link } from 'react-router-dom';
 import { LoginForm } from '@/components/auth';
+import ThemeToggle from '@/components/common/ThemeToggle';
 import './AuthPages.css';
 
 export default function LoginPage() {
@@ -15,7 +16,7 @@ export default function LoginPage() {
   return (
     <div className="auth-layout">
 
-      {/* Panel verde — izquierda en login */}
+      {/* Panel verde — izquierda */}
       <div className="auth-left">
         <div className="auth-left-inner">
           <div className="auth-orb auth-orb-1" />
@@ -34,9 +35,7 @@ export default function LoginPage() {
           </Link>
 
           <div className="auth-left-content">
-            <h2 className="auth-left-title">
-              Bienvenido de<br/><em>vuelta</em>
-            </h2>
+            <h2 className="auth-left-title">Bienvenido de<br/><em>vuelta</em></h2>
             <p className="auth-left-desc">
               Tu ciudad en tiempo real. Seguridad, movilidad y servicios públicos en un solo lugar.
             </p>
@@ -58,8 +57,11 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* Formulario — derecha en login */}
+      {/* Formulario — derecha */}
       <div className="auth-right">
+        {/* Botón tema — top derecha del panel del formulario */}
+        <ThemeToggle className="auth-theme-panel-btn auth-theme-panel-btn--right" />
+
         <div className="auth-form-wrap">
           <div className="auth-form-header">
             <h1 className="auth-form-title">Iniciar Sesión</h1>
@@ -86,12 +88,13 @@ export default function LoginPage() {
 
           <div className="auth-divider"><span>O</span></div>
 
-          {/* LoginForm — tiene su propio h2 y links que el CSS oculta */}
           <LoginForm onSuccess={handleLoginSuccess} />
 
           <p className="auth-switch">
             ¿No tienes cuenta?{' '}
-            <Link to="/register" className="auth-switch-link" viewTransition>Regístrate</Link>
+            <Link to="/register" className="auth-switch-link" viewTransition>
+              Regístrate
+            </Link>
           </p>
           <p className="auth-switch" style={{marginTop:'8px'}}>
             <Link to="/forgot-password" className="auth-switch-link" viewTransition>

@@ -1,6 +1,7 @@
 // src/pages/RegisterPage.jsx
 import { useNavigate, Link } from 'react-router-dom';
 import { RegisterForm } from '@/components/auth';
+import ThemeToggle from '@/components/common/ThemeToggle';
 import './AuthPages.css';
 
 export default function RegisterPage() {
@@ -13,10 +14,9 @@ export default function RegisterPage() {
   };
 
   return (
-    /* auth-flipped → CSS invierte order: panel verde va a la derecha */
     <div className="auth-layout auth-flipped">
 
-      {/* Panel verde — se mueve a la derecha por order:2 */}
+      {/* Panel verde — derecha (por auth-flipped) */}
       <div className="auth-left">
         <div className="auth-left-inner">
           <div className="auth-orb auth-orb-1" />
@@ -35,9 +35,7 @@ export default function RegisterPage() {
           </Link>
 
           <div className="auth-left-content">
-            <h2 className="auth-left-title">
-              Empieza con<br/><em>nosotros</em> hoy
-            </h2>
+            <h2 className="auth-left-title">Empieza con<br/><em>nosotros</em> hoy</h2>
             <p className="auth-left-desc">
               Completa estos pasos para crear tu cuenta y acceder a la inteligencia ciudadana de Medellín.
             </p>
@@ -59,8 +57,11 @@ export default function RegisterPage() {
         </div>
       </div>
 
-      {/* Formulario — se mueve a la izquierda por order:1 */}
+      {/* Formulario — izquierda (por auth-flipped order:1) */}
       <div className="auth-right">
+        {/* Botón tema — top izquierda del panel del formulario (flipped) */}
+        <ThemeToggle className="auth-theme-panel-btn auth-theme-panel-btn--left" />
+
         <div className="auth-form-wrap">
           <div className="auth-form-header">
             <h1 className="auth-form-title">Crear Cuenta</h1>
@@ -87,12 +88,13 @@ export default function RegisterPage() {
 
           <div className="auth-divider"><span>O</span></div>
 
-          {/* RegisterForm — tiene su propio h2 y links que el CSS oculta */}
           <RegisterForm onSuccess={handleRegisterSuccess} />
 
           <p className="auth-switch">
             ¿Ya tienes cuenta?{' '}
-            <Link to="/login" className="auth-switch-link" viewTransition>Inicia sesión</Link>
+            <Link to="/login" className="auth-switch-link" viewTransition>
+              Inicia sesión
+            </Link>
           </p>
         </div>
       </div>
