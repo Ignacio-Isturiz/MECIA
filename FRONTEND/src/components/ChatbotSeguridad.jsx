@@ -1,8 +1,8 @@
 // src/components/ChatbotSeguridad.jsx
-// Chatbot de recomendaciones de seguridad basado en datos de criminalidad por comuna
 
 import { useState, useRef, useEffect } from 'react';
 import { llmService } from '@/services/llmService';
+import MapaLeafletComunas from '@/components/MapaLeafletComunas';
 
 const SUGERENCIAS = [
   '¿Cuál es el barrio más seguro para vivir?',
@@ -20,7 +20,7 @@ function Mensaje({ msg }) {
       marginBottom: '0.75rem',
     }}>
       <div style={{
-        maxWidth: '80%',
+        maxWidth: esBot && msg.mapa ? '95%' : '80%',
         padding: '0.75rem 1rem',
         borderRadius: esBot ? '0 1rem 1rem 1rem' : '1rem 0 1rem 1rem',
         backgroundColor: esBot ? '#1e293b' : '#ef4444',
@@ -30,6 +30,7 @@ function Mensaje({ msg }) {
         whiteSpace: 'pre-wrap',
       }}>
         {msg.text}
+        {esBot && msg.mapa && <MapaLeafletComunas comunas={msg.mapa} destacadas={msg.destacadas} />}
       </div>
     </div>
   );
@@ -60,8 +61,16 @@ export default function ChatbotSeguridad() {
 
     try {
       const res = await llmService.securityChat({ prompt });
-      const respuesta = res?.data?.output || 'No pude obtener una respuesta. Intenta de nuevo.';
-      setMessages((prev) => [...prev, { role: 'bot', text: respuesta }]);
+      const data = res?.data;
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'bot',
+          text: data?.output || 'No pude obtener una respuesta. Intenta de nuevo.',
+          mapa: data?.mostrar_mapa ? data?.datos_mapa : null,
+          destacadas: data?.comunas_destacadas || [],
+        },
+      ]);
     } catch {
       setMessages((prev) => [
         ...prev,
