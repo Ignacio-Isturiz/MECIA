@@ -101,6 +101,12 @@ export const Icons = {
       <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
     </svg>
   ),
+  Rocket: () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4.5 16.5c-1.5-1-2-3.5-1-5.5 3-5 8-8 8-8s3 3 8 8c1 2 .5 4.5-1 5.5M12 12v8"/><circle cx="12" cy="8" r="2"/>
+      <path d="M8 20h8M9 17h6"/>
+    </svg>
+  ),
 };
 
 /**

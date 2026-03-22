@@ -1,4 +1,4 @@
-import { API_CONFIG } from "../config/api";
+import { API_CONFIG, getAuthHeaders } from "../config/api";
 
 export const llmService = {
   async getMockModels() {
@@ -34,6 +34,59 @@ export const llmService = {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ prompt }),
+    });
+
+    if (!response.ok) throw new Error(`Error ${response.status}: ${response.statusText}`);
+    return response.json();
+  },
+
+  async entrepreneurChat({ prompt, conversation_id }) {
+    const body = { prompt };
+    if (conversation_id) body.conversation_id = conversation_id;
+
+    const response = await fetch(`${API_CONFIG.baseURL}/api/llm/emprendedor/consulta`, {
+      method: "POST",
+      headers: getAuthHeaders(),
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+        if (response.status === 401) {
+            throw new Error("Sesión expirada o no autorizada. Por favor inicia sesión de nuevo.");
+        }
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+    }
+    return response.json();
+  },
+
+  // ══════════════════════════════════════════════════════════
+  // CONVERSATION HISTORY METHODS
+  // ══════════════════════════════════════════════════════════
+
+  async getConversations() {
+    const response = await fetch(`${API_CONFIG.baseURL}/api/llm/emprendedor/conversations`, {
+      method: "GET",
+      headers: getAuthHeaders(),
+    });
+
+    if (!response.ok) throw new Error(`Error ${response.status}: ${response.statusText}`);
+    return response.json();
+  },
+
+  async getConversation(conversationId) {
+    const response = await fetch(`${API_CONFIG.baseURL}/api/llm/emprendedor/conversations/${conversationId}`, {
+      method: "GET",
+      headers: getAuthHeaders(),
+    });
+
+    if (!response.ok) throw new Error(`Error ${response.status}: ${response.statusText}`);
+    return response.json();
+  },
+
+  async deleteConversation(conversationId) {
+    const response = await fetch(`${API_CONFIG.baseURL}/api/llm/emprendedor/conversations/${conversationId}`, {
+      method: "DELETE",
+      headers: getAuthHeaders(),
     });
 
     if (!response.ok) throw new Error(`Error ${response.status}: ${response.statusText}`);

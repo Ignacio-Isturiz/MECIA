@@ -43,4 +43,5 @@ def init_db():
     Se llama una sola vez al arrancar la aplicación.
     """
     from app.models.user import Base
+    from app.models.conversation import Conversation, Message  # Ensure models are imported
     Base.metadata.create_all(bind=engine)

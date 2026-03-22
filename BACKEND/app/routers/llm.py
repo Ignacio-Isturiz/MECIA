@@ -1,13 +1,18 @@
-"""Endpoints de LLM: mock, seguridad y análisis de facturas."""
+"""Endpoints de LLM: mock, seguridad, análisis de facturas y historial de conversaciones."""
 
 from pydantic import BaseModel, Field
-from fastapi import APIRouter, HTTPException, status, UploadFile, File
+from typing import Optional
+from fastapi import APIRouter, HTTPException, status, UploadFile, File, Depends
 import logging
 
 from app.services.llm_mock import LLMMockService
 from app.services.security_llm_service import security_chat_real
+from app.services.entrepreneur_llm_service import entrepreneur_chat_real
 from app.services.bill_analysis_service import analyze_bill
+from app.services.conversation_service import ConversationService
 from app.core.config import get_settings
+from app.core.dependencies import get_current_user, get_db
+from app.models.user import User
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +31,11 @@ class SimulateRecommendationRequest(BaseModel):
 
 class SecurityChatRequest(BaseModel):
     prompt: str = Field(min_length=3, max_length=2000)
+
+
+class EmprendedorChatRequest(BaseModel):
+    prompt: str = Field(min_length=3, max_length=2000)
+    conversation_id: Optional[str] = None  # NEW: for saving to conversation history
 
 
 @router.get(
@@ -124,3 +134,142 @@ async def security_chat(payload: SecurityChatRequest):
     except Exception as e:
         logger.error(f"Error en chatbot de seguridad: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error procesando consulta de seguridad")
+
+
+@router.post(
+    "/emprendedor/consulta",
+    status_code=status.HTTP_200_OK,
+    summary="Chatbot de emprendedor con recomendaciones basadas en datos de negocios"
+)
+async def entrepreneur_chat(
+    payload: EmprendedorChatRequest,
+    current_user: User = Depends(get_current_user),
+    db = Depends(get_db),
+):
+    """Chat with entrepreneur bot - saves messages to conversation history."""
+    try:
+        settings = get_settings()
+        conv_service = ConversationService(db)
+
+        # Get or create conversation
+        conversation_id = payload.conversation_id
+        title = None
+
+        if not conversation_id:
+            # Generate AI title from first prompt
+            title = conv_service.generate_title_from_prompt(payload.prompt)
+            conversation = await conv_service.create_conversation(current_user.id, title)
+            conversation_id = conversation.id
+
+        # Call LLM
+        result = await entrepreneur_chat_real(
+            prompt=payload.prompt,
+            provider=settings.LLM_PROVIDER,
+            openai_key=settings.OPENAI_API_KEY,
+            gemini_key=settings.GEMINI_API_KEY,
+        )
+
+        # Save user message
+        await conv_service.save_message_to_conversation(
+            conversation_id,
+            "user",
+            payload.prompt,
+            [],
+            {}
+        )
+
+        # Save bot message
+        await conv_service.save_message_to_conversation(
+            conversation_id,
+            "bot",
+            result.get("output", ""),
+            result.get("recomendaciones_especificas", []),
+            result.get("prediccion_costo_mensual", {})
+        )
+
+        # Return with conversation_id and title
+        response_data = result.copy()
+        response_data["conversation_id"] = conversation_id
+        if title:
+            response_data["title"] = title
+
+        return {"success": True, "data": response_data}
+    except Exception as e:
+        logger.error(f"Error en chatbot de emprendedor: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error procesando consulta de emprendedor")
+
+
+# ═══════════════════════════════════════════════════════════════
+# CONVERSATION MANAGEMENT ENDPOINTS
+# ═══════════════════════════════════════════════════════════════
+
+
+@router.get(
+    "/emprendedor/conversations",
+    status_code=status.HTTP_200_OK,
+    summary="List all conversations for authenticated user"
+)
+async def list_conversations(
+    current_user: User = Depends(get_current_user),
+    db = Depends(get_db),
+):
+    """Get all conversations for the current user (ordered by recency)."""
+    try:
+        conv_service = ConversationService(db)
+        conversations = await conv_service.get_user_conversations(current_user.id)
+        return {"success": True, "data": conversations}
+    except Exception as e:
+        logger.error(f"Error listing conversations: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error loading conversations")
+
+
+@router.get(
+    "/emprendedor/conversations/{conversation_id}",
+    status_code=status.HTTP_200_OK,
+    summary="Get a specific conversation with all messages"
+)
+async def get_conversation(
+    conversation_id: str,
+    current_user: User = Depends(get_current_user),
+    db = Depends(get_db),
+):
+    """Get specific conversation with all messages (verify ownership)."""
+    try:
+        conv_service = ConversationService(db)
+        conversation = await conv_service.get_conversation_with_messages(conversation_id, current_user.id)
+
+        if not conversation:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found")
+
+        return {"success": True, "data": conversation}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting conversation: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error loading conversation")
+
+
+@router.delete(
+    "/emprendedor/conversations/{conversation_id}",
+    status_code=status.HTTP_200_OK,
+    summary="Delete a conversation"
+)
+async def delete_conversation(
+    conversation_id: str,
+    current_user: User = Depends(get_current_user),
+    db = Depends(get_db),
+):
+    """Delete a conversation (verify ownership before deletion)."""
+    try:
+        conv_service = ConversationService(db)
+        deleted = await conv_service.delete_conversation(conversation_id, current_user.id)
+
+        if not deleted:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found")
+
+        return {"success": True, "message": "Conversation deleted"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting conversation: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error deleting conversation")
