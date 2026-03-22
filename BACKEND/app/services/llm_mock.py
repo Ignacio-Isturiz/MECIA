@@ -271,3 +271,34 @@ class LLMMockService:
             "data_source": "Criminalidad_por_Comuna_data.csv",
             "mock": True,
         }
+
+    def simulate_entrepreneur_chat(self, prompt: str) -> Dict[str, Any]:
+        """Simula respuesta del chatbot de emprendedor."""
+        time.sleep(0.8)
+        
+        # Respuesta base
+        texto = (
+            "Como asesor MECIA, he analizado tu idea. "
+            f"Emprender con '{prompt[:50]}...' en Medellín es una gran iniciativa. "
+            "Basado en los datos de la zona, veo una oportunidad interesante pero con competencia moderada."
+        )
+        
+        return {
+            "texto": texto,
+            "recomendaciones_especificas": [
+                "Realizar un estudio de mercado detallado en la comuna elegida.",
+                "Validar los costos de servicios públicos (EPM) para el estrato del local.",
+                "Analizar la competencia directa en un radio de 500 metros.",
+                "Considerar una estrategia de marketing digital local."
+            ],
+            "prediccion_costo_mensual": {
+                "energia_estimada": 120000,
+                "agua_estimada": 85000,
+                "gas_estimada": 45000,
+                "total_servicios": 250000,
+                "nota": "Estimación inicial mock para un local pequeño."
+            },
+            "model": "gpt-4o-mini-sim",
+            "provider": "openai-mock",
+            "mock": True
+        }

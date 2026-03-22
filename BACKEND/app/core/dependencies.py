@@ -2,7 +2,7 @@
 Dependencias de FastAPI: inyección de dependencias
 Aplica Dependency Inversion Principle de SOLID
 """
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Header
 from sqlalchemy.orm import Session
 from typing import Optional
 
@@ -12,6 +12,10 @@ from app.services.auth import AuthService
 from app.core.security import security_manager
 from app.models.user import User
 from app.core.exceptions import InvalidTokenException
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def get_user_repository(db: Session = Depends(get_db)) -> UserRepository:
@@ -45,59 +49,52 @@ def get_auth_service(
     )
 
 
+
+# Extractor de token del header (helper)
+async def get_token_from_header(
+    authorization: Optional[str] = Header(None),
+) -> Optional[str]:
+    """
+    Extrae el token JWT del header Authorization.
+    """
+    if not authorization:
+        logger.warning("No Authorization header provided")
+        return None
+    
+    parts = authorization.split()
+    if len(parts) != 2:
+        logger.warning(f"Invalid Authorization header format: {len(parts)} parts")
+        return None
+        
+    if parts[0].lower() != "bearer":
+        logger.warning(f"Invalid Authorization prefix: {parts[0]}")
+        return None
+    
+    return parts[1]
+
+
 async def get_current_user(
-    token: str = None,
+    token: str = Depends(get_token_from_header),
     auth_service: AuthService = Depends(get_auth_service)
 ) -> User:
     """
     Obtiene el usuario actual desde el token en Authorization header.
-    Esta es una dependencia que puede usarse en los routers.
-    
-    Args:
-        token: Token extraído del header
-        auth_service: Servicio de autenticación inyectado
-        
-    Returns:
-        Usuario autenticado
-        
-    Raises:
-        InvalidTokenException: Si el token es inválido
     """
     if not token:
+        logger.error("Token extraction failed (None value)")
         raise InvalidTokenException()
     
     user = await auth_service.get_user_by_token(token)
     
     if not user:
+        logger.error("User not found for provided token or token expired/invalid")
         raise InvalidTokenException()
     
     if not user.is_active:
+        logger.warning(f"Inactive user attempted access: {user.email}")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Usuario inactivo"
         )
     
     return user
-
-
-# Extractor de token del header (helper)
-async def get_token_from_header(
-    authorization: Optional[str] = None,
-) -> Optional[str]:
-    """
-    Extrae el token JWT del header Authorization.
-    
-    Args:
-        authorization: Header de autorización
-        
-    Returns:
-        Token sin el prefijo "Bearer " o None
-    """
-    if not authorization:
-        return None
-    
-    parts = authorization.split()
-    if len(parts) != 2 or parts[0].lower() != "bearer":
-        return None
-    
-    return parts[1]

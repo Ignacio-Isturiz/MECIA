@@ -11,15 +11,18 @@ import DashboardLayout, {
 import EmprendedorInsightsDashboard from '@/components/EmprendedorInsightsDashboard';
 import NegociosCoberturaSection     from '@/components/NegociosCoberturaSection';
 import NegociosCercanosSection      from '@/components/NegociosCercanosSection';
+import ChatbotEmprendedor from '@/components/ChatbotEmprendedor';
+import ConversationList from '@/components/ConversationList';
 
 import '@/pages/DashboardComponents.css';
 
 /* ── Sidebar nav ── */
 const NAV = [
-  { id: 'inicio',    label: 'Inicio',              icon: <Icons.Dashboard /> },
-  { id: 'insights',  label: 'Inteligencia Emp.',   icon: <Icons.Chart /> },
-  { id: 'negocios',  label: 'Negocios Cercanos',   icon: <Icons.Store /> },
-  { id: 'cobertura', label: 'Cobertura y Tarifas', icon: <Icons.Bolt /> },
+  { id: 'inicio',      label: 'Inicio',              icon: <Icons.Dashboard /> },
+  { id: 'emprendedor', label: 'Abre Tu Negocio',     icon: <Icons.Rocket /> },
+  { id: 'insights',    label: 'Inteligencia Emp.',   icon: <Icons.Chart /> },
+  { id: 'negocios',    label: 'Negocios Cercanos',   icon: <Icons.Store /> },
+  { id: 'cobertura',   label: 'Cobertura y Tarifas', icon: <Icons.Bolt /> },
 ];
 
 /* ── Tab bar ── */
@@ -102,6 +105,7 @@ export default function EmprendedorDashboard() {
   const [activeModule, setActiveModule] = useState('inicio');
   const [insightsTab, setInsightsTab] = useState('empresarial');
   const [negociosTab, setNegociosTab] = useState('cercanos');
+  const [currentConversationId, setCurrentConversationId] = useState(null);
 
   useEffect(() => {
     authService.getMe()
@@ -125,10 +129,11 @@ export default function EmprendedorDashboard() {
   const firstName = user.full_name?.split(' ')[0] || 'Emprendedor';
 
   const PAGE_META = {
-    inicio:    { title: `Hola, ${firstName}`,       subtitle: 'Panel ejecutivo para emprendedores de Medellín' },
-    insights:  { title: 'Inteligencia Empresarial', subtitle: 'Datos empresariales cruzados con contexto de zona' },
-    negocios:  { title: 'Negocios y Cobertura',     subtitle: 'Negocios cercanos · Cobertura EPM · Tarifas' },
-    cobertura: { title: 'Cobertura y Tarifas',      subtitle: 'Estratificación, servicios públicos y tarifas EPM' },
+    inicio:      { title: `Hola, ${firstName}`,       subtitle: 'Panel ejecutivo para emprendedores de Medellín' },
+    emprendedor: { title: 'Abre Tu Negocio',          subtitle: 'Consultor IA · Análisis de viabilidad · Recomendaciones' },
+    insights:    { title: 'Inteligencia Empresarial', subtitle: 'Datos empresariales cruzados con contexto de zona' },
+    negocios:    { title: 'Negocios y Cobertura',     subtitle: 'Negocios cercanos · Cobertura EPM · Tarifas' },
+    cobertura:   { title: 'Cobertura y Tarifas',      subtitle: 'Estratificación, servicios públicos y tarifas EPM' },
   };
 
   const meta = PAGE_META[activeModule];
@@ -238,6 +243,73 @@ export default function EmprendedorDashboard() {
             <NegociosCoberturaSection />
           </div>
         </DashboardCard>
+      )}
+
+      {/* ══ ABRE TU NEGOCIO ══ */}
+      {activeModule === 'emprendedor' && (
+        <div style={{
+          display: 'flex',
+          height: '100%',
+          gap: 0,
+          background: 'rgba(15, 23, 42, 0.4)',
+          borderRadius: 14,
+          overflow: 'hidden',
+        }}>
+          {/* Left sidebar with conversation list */}
+          <ConversationList
+            currentId={currentConversationId}
+            onSelect={setCurrentConversationId}
+            onNew={() => setCurrentConversationId(null)}
+            onDelete={(convId) => {
+              if (currentConversationId === convId) {
+                setCurrentConversationId(null);
+              }
+            }}
+          />
+
+          {/* Right area with chatbot */}
+          <div style={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            minWidth: 0,
+            borderLeft: '1px solid rgba(255,255,255,0.06)',
+          }}>
+            <div style={{
+              padding: '16px 18px',
+              borderBottom: '1px solid rgba(255,255,255,0.06)',
+            }}>
+              <h2 style={{
+                margin: 0,
+                fontSize: 16,
+                fontWeight: 700,
+                color: '#fff',
+                fontFamily: 'Inter, sans-serif',
+              }}>
+                Abre Tu Negocio
+              </h2>
+              <p style={{
+                margin: '4px 0 0',
+                fontSize: 13,
+                color: 'rgba(255,255,255,0.5)',
+                fontFamily: 'Inter, sans-serif',
+              }}>
+                Asesor IA para emprendedores · Análisis de viabilidad · Recomendaciones
+              </p>
+            </div>
+
+            <div style={{
+              flex: 1,
+              overflow: 'hidden',
+              padding: '16px 18px',
+            }}>
+              <ChatbotEmprendedor
+                conversationId={currentConversationId}
+                onConversationChange={setCurrentConversationId}
+              />
+            </div>
+          </div>
+        </div>
       )}
 
     </DashboardLayout>
