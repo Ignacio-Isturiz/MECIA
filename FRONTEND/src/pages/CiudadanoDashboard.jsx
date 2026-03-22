@@ -1,111 +1,111 @@
 // src/pages/CiudadanoDashboard.jsx
-
 import { useEffect, useState } from 'react';
-import authService from '@/services/authService';
 import { useNavigate } from 'react-router-dom';
-import CriminalidadDashboard from '@/components/CriminalidadDashboard';
-import CitizenNewsSection from '@/components/CitizenNewsSection';
-import ChatbotSeguridad from '@/components/ChatbotSeguridad';
-import AnalizadorFactura from '@/components/AnalizadorFactura';
+import authService from '@/services/authService';
 
+import DashboardLayout, {
+  DashboardCard,
+  StatCard,
+  Icons,
+} from '@/components/dashboard/DashboardLayout';
+
+import CriminalidadDashboard from '@/components/CriminalidadDashboard';
+import CitizenNewsSection    from '@/components/CitizenNewsSection';
+import ChatbotSeguridad      from '@/components/ChatbotSeguridad';
+import AnalizadorFactura     from '@/components/AnalizadorFactura';
+
+import '@/pages/DashboardComponents.css';
+
+/* ── Sidebar nav ── */
 const NAV = [
-  { id: 'dashboard', label: 'Dashboard', icon: '⊞' },
-  { id: 'seguridad', label: 'Módulo Seguridad', icon: '🛡️' },
-  { id: 'servicios', label: 'Módulo Servicios', icon: '⚡' },
+  { id: 'inicio',    label: 'Inicio',        icon: <Icons.Dashboard /> },
+  { id: 'seguridad', label: 'Seguridad',      icon: <Icons.Shield /> },
+  { id: 'servicios', label: 'Servicios EPM',  icon: <Icons.Bolt /> },
+  { id: 'noticias',  label: 'Noticias',       icon: <Icons.News /> },
 ];
 
-function Sidebar({ active, onSelect, user, onLogout }) {
+/* ── Tab pill component ── */
+function TabBar({ tabs, active, onChange }) {
   return (
     <div style={{
-      width: '220px',
-      minHeight: '100vh',
-      backgroundColor: '#0f172a',
-      borderRight: '1px solid #1e293b',
-      display: 'flex',
-      flexDirection: 'column',
-      flexShrink: 0,
+      display: 'flex', gap: 6, flexWrap: 'wrap',
+      padding: '14px 16px 0',
+      borderBottom: '1px solid rgba(255,255,255,0.06)',
     }}>
-      {/* Logo */}
-      <div style={{ padding: '1.5rem 1.25rem', borderBottom: '1px solid #1e293b' }}>
-        <div style={{ fontSize: '1.4rem', fontWeight: 'bold', color: 'white', letterSpacing: '0.05em' }}>MECIA</div>
-        <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '0.15rem' }}>Medellín, Colombia</div>
-      </div>
-
-      {/* Usuario */}
-      <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid #1e293b' }}>
-        <div style={{ fontSize: '0.8rem', fontWeight: '600', color: '#e2e8f0' }}>{user?.full_name}</div>
-        <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'capitalize' }}>{user?.role}</div>
-      </div>
-
-      {/* Nav */}
-      <nav style={{ flex: 1, padding: '0.75rem 0' }}>
-        {NAV.map(item => (
-          <button
-            key={item.id}
-            onClick={() => onSelect(item.id)}
-            style={{
-              width: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.65rem',
-              padding: '0.65rem 1.25rem',
-              backgroundColor: active === item.id ? '#1e293b' : 'transparent',
-              borderLeft: active === item.id ? '3px solid #3b82f6' : '3px solid transparent',
-              color: active === item.id ? '#e2e8f0' : '#94a3b8',
-              border: 'none',
-              borderLeft: active === item.id ? '3px solid #3b82f6' : '3px solid transparent',
-              cursor: 'pointer',
-              fontSize: '0.85rem',
-              textAlign: 'left',
-              transition: 'all 0.15s',
-            }}
-          >
-            <span style={{ fontSize: '1rem' }}>{item.icon}</span>
-            {item.label}
-          </button>
-        ))}
-      </nav>
-
-      {/* Logout */}
-      <div style={{ padding: '1rem 1.25rem', borderTop: '1px solid #1e293b' }}>
+      {tabs.map(t => (
         <button
-          onClick={onLogout}
+          key={t.id}
+          onClick={() => onChange(t.id)}
           style={{
-            width: '100%',
-            padding: '0.6rem',
-            backgroundColor: '#7f1d1d',
-            color: '#fca5a5',
+            padding: '6px 14px',
+            borderRadius: '8px 8px 0 0',
             border: 'none',
-            borderRadius: '0.4rem',
+            background: active === t.id
+              ? 'rgba(0,200,150,0.12)'
+              : 'transparent',
+            color: active === t.id
+              ? '#00C896'
+              : 'rgba(255,255,255,0.38)',
+            fontSize: 12.5,
+            fontWeight: active === t.id ? 700 : 500,
             cursor: 'pointer',
-            fontSize: '0.82rem',
-            fontWeight: '600',
+            fontFamily: 'Inter, sans-serif',
+            borderBottom: active === t.id
+              ? '2px solid #00C896'
+              : '2px solid transparent',
+            transition: 'all 0.18s',
           }}
         >
-          Cerrar Sesión
+          {t.label}
         </button>
-      </div>
+      ))}
     </div>
   );
 }
 
-function ModuleCard({ title, subtitle, children, fullWidth = false }) {
+/* ── Overview cards ── */
+function OverviewCard({ icon, title, subtitle, value, accent, onClick }) {
   return (
-    <div style={{
-      border: '1px solid #334155',
-      borderRadius: '0.5rem',
-      overflow: 'hidden',
-      display: 'flex',
-      flexDirection: 'column',
-      gridColumn: fullWidth ? '1 / -1' : undefined,
-    }}>
-      <div style={{ padding: '1rem 1rem 0.5rem', borderBottom: '1px solid #334155' }}>
-        <h2 style={{ margin: 0, fontSize: '1rem', color: '#e2e8f0' }}>{title}</h2>
-        {subtitle && <p style={{ margin: '0.2rem 0 0', fontSize: '0.78rem', color: '#94a3b8' }}>{subtitle}</p>}
+    <div
+      onClick={onClick}
+      style={{
+        background: 'rgba(255,255,255,0.04)',
+        border: `1px solid ${accent ? 'rgba(0,200,150,0.22)' : 'rgba(255,255,255,0.08)'}`,
+        borderRadius: 14,
+        padding: '18px 20px',
+        cursor: onClick ? 'pointer' : 'default',
+        transition: 'transform 0.18s, border-color 0.18s, box-shadow 0.18s',
+        display: 'flex', flexDirection: 'column', gap: 10,
+      }}
+      onMouseEnter={e => onClick && (e.currentTarget.style.transform = 'translateY(-2px)', e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.25)')}
+      onMouseLeave={e => onClick && (e.currentTarget.style.transform = '', e.currentTarget.style.boxShadow = '')}
+    >
+      <div style={{
+        width: 38, height: 38, borderRadius: 10,
+        background: accent ? 'rgba(0,200,150,0.12)' : 'rgba(255,255,255,0.06)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        color: accent ? '#00C896' : 'rgba(255,255,255,0.5)',
+      }}>
+        {icon}
       </div>
-      <div style={{ flex: 1, overflowY: 'auto' }}>
-        {children}
+      <div>
+        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.38)', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', fontFamily: 'Inter, sans-serif' }}>
+          {title}
+        </div>
+        <div style={{ fontSize: 20, fontWeight: 800, color: accent ? '#00C896' : '#fff', fontFamily: 'Montserrat, sans-serif', marginTop: 2 }}>
+          {value}
+        </div>
+        {subtitle && (
+          <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.32)', marginTop: 2, fontFamily: 'Inter, sans-serif' }}>
+            {subtitle}
+          </div>
+        )}
       </div>
+      {onClick && (
+        <div style={{ fontSize: 11, color: '#00C896', fontWeight: 600, fontFamily: 'Inter, sans-serif' }}>
+          Ver módulo →
+        </div>
+      )}
     </div>
   );
 }
@@ -114,7 +114,9 @@ export default function CiudadanoDashboard() {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [activeModule, setActiveModule] = useState('dashboard');
+  const [activeModule, setActiveModule] = useState('inicio');
+  const [segTab, setSegTab] = useState('chatbot');
+  const [svcTab, setSvcTab] = useState('factura');
 
   useEffect(() => {
     authService.getMe()
@@ -125,83 +127,141 @@ export default function CiudadanoDashboard() {
 
   const handleLogout = () => { authService.logout(); navigate('/login'); };
 
-  if (loading) return <div style={{ color: 'white', padding: '2rem' }}>Cargando...</div>;
+  if (loading) {
+    return (
+      <div className="db-loading">
+        <div className="db-spinner" />
+        Cargando tu ciudad…
+      </div>
+    );
+  }
   if (!user) return null;
 
+  const firstName = user.full_name?.split(' ')[0] || 'Usuario';
+
+  const PAGE_META = {
+    inicio:    { title: `Hola, ${firstName}`,   subtitle: 'Vista general de Medellín en tiempo real' },
+    seguridad: { title: 'Seguridad',             subtitle: 'Chatbot Guardián y criminalidad por commune' },
+    servicios: { title: 'Servicios Públicos',    subtitle: 'Análisis de facturas EPM con IA' },
+    noticias:  { title: 'Noticias',              subtitle: 'Actualidad de Medellín por categoría' },
+  };
+
+  const meta = PAGE_META[activeModule];
+
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#0f172a' }}>
-      <Sidebar active={activeModule} onSelect={setActiveModule} user={user} onLogout={handleLogout} />
+    <DashboardLayout
+      user={user}
+      navItems={NAV}
+      activeItem={activeModule}
+      onSelect={setActiveModule}
+      onLogout={handleLogout}
+      pageTitle={meta.title}
+      pageSubtitle={meta.subtitle}
+      breadcrumb={`Ciudadano / ${meta.title}`}
+    >
 
-      {/* Contenido */}
-      <div style={{ flex: 1, padding: '1.5rem', overflowY: 'auto' }}>
+      {/* ══ INICIO ══ */}
+      {activeModule === 'inicio' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-        {/* Header */}
-        <div style={{ marginBottom: '1.5rem' }}>
-          <h1 style={{ margin: 0, fontSize: '1.5rem', color: '#f1f5f9' }}>
-            {activeModule === 'dashboard' && `Hola, ${user.full_name}`}
-            {activeModule === 'seguridad' && 'Módulo de Seguridad'}
-            {activeModule === 'servicios' && 'Módulo de Servicios'}
-          </h1>
-          <p style={{ margin: '0.25rem 0 0', fontSize: '0.82rem', color: '#64748b' }}>
-            {activeModule === 'dashboard' && 'Vista general de tu ciudad'}
-            {activeModule === 'seguridad' && 'Consulta y analiza la seguridad en Medellín'}
-            {activeModule === 'servicios' && 'Analiza tus facturas EPM y ahorra'}
-          </p>
-        </div>
-
-        {/* DASHBOARD: vista completa */}
-        {activeModule === 'dashboard' && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-            <CitizenNewsSection />
-
-            <ModuleCard title="Chatbot de Seguridad" subtitle="Consulta la seguridad de cualquier barrio o zona">
-              <ChatbotSeguridad />
-            </ModuleCard>
-
-            <ModuleCard title="Análisis de Facturas EPM" subtitle="Sube tu factura y recibe recomendaciones de ahorro">
-              <div style={{ padding: '1rem' }}>
-                <AnalizadorFactura />
-              </div>
-            </ModuleCard>
-
-            <ModuleCard title="Criminalidad por Comuna">
-              <div style={{ padding: '1rem' }}>
-                <CriminalidadDashboard />
-              </div>
-            </ModuleCard>
+          {/* Overview grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14 }}>
+            <OverviewCard
+              icon={<Icons.Shield />}
+              title="Seguridad"
+              value="Activo"
+              subtitle="Chatbot + criminalidad"
+              accent
+              onClick={() => setActiveModule('seguridad')}
+            />
+            <OverviewCard
+              icon={<Icons.Bolt />}
+              title="Servicios EPM"
+              value="Listo"
+              subtitle="Análisis con IA"
+              accent
+              onClick={() => setActiveModule('servicios')}
+            />
+            <OverviewCard
+              icon={<Icons.News />}
+              title="Noticias"
+              value="6 módulos"
+              subtitle="General · Seguridad · +4"
+              onClick={() => setActiveModule('noticias')}
+            />
+            <OverviewCard
+              icon={<Icons.MapPin />}
+              title="Ciudad"
+              value="Medellín"
+              subtitle="Valle de Aburrá"
+            />
           </div>
-        )}
 
-        {/* SEGURIDAD */}
-        {activeModule === 'seguridad' && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-            <ModuleCard title="Chatbot de Seguridad" subtitle="Consulta la seguridad de cualquier barrio o zona de Medellín">
-              <ChatbotSeguridad />
-            </ModuleCard>
-
-            <ModuleCard title="Criminalidad por Comuna" subtitle="Datos reales de criminalidad en las comunas de Medellín">
-              <div style={{ padding: '1rem' }}>
-                <CriminalidadDashboard />
-              </div>
-            </ModuleCard>
-          </div>
-        )}
-
-        {/* SERVICIOS */}
-        {activeModule === 'servicios' && (
-          <div style={{ maxWidth: '700px' }}>
-            <ModuleCard
-              title="Análisis de Facturas EPM"
-              subtitle="Sube una o varias fotos de tu factura y recibe recomendaciones de ahorro con predicción del próximo pago"
+          {/* Chat + Noticias en 2 columnas */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <DashboardCard
+              title="Guardián"
+              subtitle="Asistente de seguridad ciudadana"
             >
-              <div style={{ padding: '1.25rem' }}>
-                <AnalizadorFactura />
-              </div>
-            </ModuleCard>
-          </div>
-        )}
+              <ChatbotSeguridad />
+            </DashboardCard>
 
-      </div>
-    </div>
+            <DashboardCard
+              title="Noticias de Medellín"
+              subtitle="Actualización en tiempo real"
+            >
+              <div style={{ padding: '10px 14px 14px' }}>
+                <CitizenNewsSection title="" defaultCategory="general" showCategoryFilter={true} />
+              </div>
+            </DashboardCard>
+          </div>
+        </div>
+      )}
+
+      {/* ══ SEGURIDAD ══ */}
+      {activeModule === 'seguridad' && (
+        <DashboardCard style={{ overflow: 'visible' }}>
+          <TabBar
+            tabs={[
+              { id: 'chatbot',       label: 'Chatbot Guardián' },
+              { id: 'criminalidad',  label: 'Criminalidad por Comuna' },
+            ]}
+            active={segTab}
+            onChange={setSegTab}
+          />
+          <div style={{ padding: '16px' }}>
+            {segTab === 'chatbot' && <ChatbotSeguridad />}
+            {segTab === 'criminalidad' && <CriminalidadDashboard />}
+          </div>
+        </DashboardCard>
+      )}
+
+      {/* ══ SERVICIOS ══ */}
+      {activeModule === 'servicios' && (
+        <div style={{ maxWidth: 760 }}>
+          <DashboardCard
+            title="Análisis de Factura EPM"
+            subtitle="Sube fotos de tu factura · Recomendaciones con GPT-4o Vision"
+          >
+            <div style={{ padding: '16px 18px' }}>
+              <AnalizadorFactura />
+            </div>
+          </DashboardCard>
+        </div>
+      )}
+
+      {/* ══ NOTICIAS ══ */}
+      {activeModule === 'noticias' && (
+        <DashboardCard
+          title="Noticias de Medellín"
+          subtitle="Filtradas por categoría · Fuentes verificadas"
+        >
+          <div style={{ padding: '12px 16px 16px' }}>
+            <CitizenNewsSection title="" defaultCategory="general" showCategoryFilter={true} />
+          </div>
+        </DashboardCard>
+      )}
+
+    </DashboardLayout>
   );
 }
