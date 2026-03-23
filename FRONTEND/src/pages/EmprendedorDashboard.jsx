@@ -10,7 +10,7 @@ import ChatMap from '@/components/ChatMap';
 
 const NAV = [
   { id:'inicio',      label:'Inicio',           icon:<Icons.Dashboard/> },
-  { id:'emprendedor', label:'Abre Tu Negocio',  icon:<Icons.Rocket/> },
+  { id:'emprendedor', label:'Abre Tu Negocio',  icon:<Icons.Rocket/>, chatbot:true },
   { id:'insights',    label:'Inteligencia',     icon:<Icons.Chart/> },
   { id:'negocios',    label:'Negocios',         icon:<Icons.Store/> },
   { id:'cobertura',   label:'Cobertura EPM',    icon:<Icons.Bolt/> },
@@ -181,11 +181,19 @@ function ConvList({ currentId, onSelect, onNew, onDelete }) {
         ) : convs.length===0 ? (
           <div style={{fontSize:12,color:'var(--text-dim)',textAlign:'center',padding:'14px 0'}}>Sin conversaciones previas</div>
         ) : convs.map(c=>(
-          <div key={c.id} className={`db-conv-item${currentId===c.id?' active':''}`} onClick={()=>onSelect(c.id)}>
-            <div style={{flex:1,minWidth:0}}>
+          <div key={c.id} className={`db-conv-item${currentId===c.id?' active':''}`}>
+            <button
+              type="button"
+              className="db-conv-open"
+              onClick={() => onSelect(c.id)}
+              aria-current={currentId===c.id ? 'true' : undefined}
+              aria-label={`Abrir conversación ${c.title || 'sin título'}`}
+            >
+              <div style={{flex:1,minWidth:0}}>
               <div className="db-conv-title">{c.title||'Sin título'}</div>
               <div className="db-conv-date">{new Date(c.created_at).toLocaleDateString('es-CO',{month:'short',day:'numeric'})}</div>
-            </div>
+              </div>
+            </button>
             <button className="db-conv-del" onClick={e=>del(e,c.id)}>✕</button>
           </div>
         ))}
@@ -682,9 +690,9 @@ export default function EmprendedorDashboard() {
   const inicioLeft = (
     <>
       <div className="db-filter-bar">
-        <div className="db-fpill" onClick={()=>setMod('emprendedor')}><span className="db-dot"/>Abre Tu Negocio</div>
-        <div className="db-fpill" onClick={()=>setMod('insights')}>Inteligencia</div>
-        <div className="db-fpill" onClick={()=>setMod('negocios')}>Negocios</div>
+        <button type="button" className="db-fpill" onClick={()=>setMod('emprendedor')}><span className="db-dot"/>Abre Tu Negocio</button>
+        <button type="button" className="db-fpill" onClick={()=>setMod('insights')}>Inteligencia</button>
+        <button type="button" className="db-fpill" onClick={()=>setMod('negocios')}>Negocios</button>
         <div className="db-fset"><Icons.Sliders/></div>
         <button className="db-btn-primary" onClick={()=>setMod('emprendedor')}>Consultar Asesor IA →</button>
       </div>
@@ -712,8 +720,13 @@ export default function EmprendedorDashboard() {
           { icon:<Icons.Chart/>, title:'Inteligencia Empresarial', desc:'Actividad económica por zona cruzada con datos de seguridad.', action:()=>setMod('insights') },
           { icon:<Icons.Store/>, title:'Negocios y Cobertura',    desc:'Negocios cercanos, cobertura EPM y tarifas por estrato.',       action:()=>setMod('negocios') },
         ].map((item,i)=>(
-          <div key={i} className="db-card" onClick={item.action}
-            style={{cursor:'pointer',padding:'16px 18px',display:'flex',alignItems:'flex-start',gap:14}}
+          <button
+            key={i}
+            type="button"
+            className="db-card db-card-action"
+            onClick={item.action}
+            aria-label={`Abrir módulo ${item.title}`}
+            style={{cursor:'pointer',padding:'16px 18px',display:'flex',alignItems:'flex-start',gap:14,textAlign:'left'}}
           >
             <div style={{
               width:38,height:38,borderRadius:10,background:'var(--active-bg)',
@@ -727,7 +740,7 @@ export default function EmprendedorDashboard() {
               <div style={{fontSize:12.5,color:'var(--text-mid)',lineHeight:1.5}}>{item.desc}</div>
               <div style={{fontSize:11,color:'var(--accent)',fontWeight:600,marginTop:6}}>Ver datos →</div>
             </div>
-          </div>
+          </button>
         ))}
       </div>
     </>

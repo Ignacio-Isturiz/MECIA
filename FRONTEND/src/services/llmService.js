@@ -104,4 +104,15 @@ export const llmService = {
     if (!response.ok) throw new Error(`Error ${response.status}: ${response.statusText}`);
     return response.json();
   },
+
+  async textToSpeech({ text, voice = "alloy" }) {
+    const response = await fetch(`${API_CONFIG.baseURL}/api/llm/tts`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, voice }),
+    });
+
+    if (!response.ok) throw new Error(`Error ${response.status}: ${response.statusText}`);
+    return response.blob();
+  },
 };

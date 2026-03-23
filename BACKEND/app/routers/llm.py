@@ -3,7 +3,9 @@
 from pydantic import BaseModel, Field
 from typing import Optional
 from fastapi import APIRouter, HTTPException, status, UploadFile, File, Depends
+from fastapi.responses import Response
 import logging
+import httpx
 
 from app.services.llm_mock import LLMMockService
 from app.services.security_llm_service import security_chat_real
@@ -36,6 +38,11 @@ class SecurityChatRequest(BaseModel):
 class EmprendedorChatRequest(BaseModel):
     prompt: str = Field(min_length=3, max_length=2000)
     conversation_id: Optional[str] = None  # NEW: for saving to conversation history
+
+
+class TextToSpeechRequest(BaseModel):
+    text: str = Field(min_length=1, max_length=700)
+    voice: str = Field(default="alloy")
 
 
 @router.get(
@@ -134,6 +141,50 @@ async def security_chat(payload: SecurityChatRequest):
     except Exception as e:
         logger.error(f"Error en chatbot de seguridad: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error procesando consulta de seguridad")
+
+
+@router.post(
+    "/tts",
+    summary="Texto a voz para accesibilidad (OpenAI)",
+)
+async def text_to_speech(payload: TextToSpeechRequest):
+    try:
+        settings = get_settings()
+        if not settings.OPENAI_API_KEY:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="OPENAI_API_KEY no está configurada en el backend",
+            )
+
+        allowed_voices = {
+            "alloy", "ash", "ballad", "coral", "echo", "fable", "nova", "onyx", "sage", "shimmer"
+        }
+        voice = payload.voice if payload.voice in allowed_voices else "alloy"
+
+        headers = {
+            "Authorization": f"Bearer {settings.OPENAI_API_KEY}",
+            "Content-Type": "application/json",
+        }
+        body = {
+            "model": "gpt-4o-mini-tts",
+            "voice": voice,
+            "input": payload.text,
+            "format": "mp3",
+        }
+
+        async with httpx.AsyncClient(timeout=40.0) as client:
+            response = await client.post("https://api.openai.com/v1/audio/speech", headers=headers, json=body)
+
+        if response.status_code >= 400:
+            logger.error("OpenAI TTS error: %s %s", response.status_code, response.text)
+            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="No se pudo generar audio TTS")
+
+        return Response(content=response.content, media_type="audio/mpeg")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Error en TTS: %s", e)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error interno en TTS")
 
 
 @router.post(
