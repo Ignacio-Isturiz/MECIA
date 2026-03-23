@@ -17,14 +17,19 @@ const SplineLoader = () => (
   </div>
 );
 
-const FAQ_ITEMS = [
-  {q:'¿MECIA es gratuito?', a:'Sí. MECIA tiene un plan gratuito completo con acceso al dashboard ciudadano, Chatbot Guardián, alertas de seguridad, movilidad y servicios. Los planes Pro incluyen historial extendido, API ilimitada y reportes automáticos.'},
-  {q:'¿De dónde vienen los datos de seguridad?', a:'Los datos provienen de la Secretaría de Seguridad de Medellín, el Centro de Mando y Control (CCTV), SISC y el Sistema 123. Los datos se procesan y anonimizan antes de mostrarse.'},
-  {q:'¿Cómo funciona la integración con EPM?', a:'MECIA se conecta con la API pública de EPM. Con tu número de cuenta consultas tu saldo, historial de consumo y recibes alertas de cortes programados. No almacenamos tus credenciales.'},
-  {q:'¿Con qué frecuencia se actualiza el Metro?', a:'Los datos del Metro de Medellín y Metroplús se actualizan cada 2 minutos durante las horas de operación. Las alertas de incidentes se procesan en tiempo real.'},
-  {q:'¿Tiene MECIA datos del SIATA?', a:'Sí. MECIA tiene integración oficial con el SIATA. Las alertas de lluvia intensa, deslizamientos y riesgo hídrico aparecen con latencia menor a 3 minutos.'},
-  {q:'¿Puedo usar MECIA fuera de Medellín?', a:'MECIA cubre los 10 municipios del Área Metropolitana del Valle de Aburrá. La expansión a otras ciudades colombianas está en la hoja de ruta para el segundo semestre de 2025.'},
-  {q:'¿Hay API para desarrolladores?', a:'Sí. API REST documentada con 1.000 requests/mes gratis. Los planes Pro ofrecen desde 100k hasta ilimitadas, con acceso a endpoints de análisis avanzado y datos históricos desde 2018.'},
+const PROFILE_ITEMS = [
+  {
+    q: 'Para quienes emprenden y quieren decidir mejor',
+    a: 'Si estás montando o escalando negocio, MECIA te ayuda a leer zonas con más claridad: seguridad del entorno, contexto del barrio y señales útiles para elegir mejor dónde moverte o crecer. Todo en un lenguaje simple y accionable.'
+  },
+  {
+    q: 'Para quienes viven la ciudad día a día',
+    a: 'Si quieres salir con más tranquilidad, aquí encuentras recomendaciones cercanas según tu zona: qué tener en cuenta, cómo moverte con más confianza y qué alertas vale la pena revisar antes de salir.'
+  },
+  {
+    q: 'Para equipos que cuidan y gestionan la ciudad',
+    a: 'Si trabajas desde una entidad pública, MECIA reúne señales territoriales en un solo lugar para facilitar seguimiento, priorización y comunicación con la comunidad, con enfoque práctico y orientado a decisiones.'
+  },
 ];
 
 export default function FAQ() {
@@ -47,8 +52,8 @@ export default function FAQ() {
     <section id="faq" ref={sectionRef} className="sec-trans sp">
       <div className="w">
         <div className="sh">
-          <div className="eye">Preguntas Frecuentes</div>
-          <h2 className="d3" style={{marginTop:'12px'}}>Todo lo que necesitas saber</h2>
+          <div className="eye">Hecho para ti</div>
+          <h2 className="d3" style={{marginTop:'12px'}}>Una experiencia pensada para cada forma de vivir Medellín</h2>
         </div>
         <div className="faq-layout">
           <div className="faq-sticky">
@@ -70,7 +75,7 @@ export default function FAQ() {
             </div>
           </div>
           <div className="faq-list">
-            {FAQ_ITEMS.map((item, idx) => (
+            {PROFILE_ITEMS.map((item, idx) => (
               <div className="faq-it" key={idx}>
                 <div className="faq-q">{item.q}<div className="faq-plus">+</div></div>
                 <div className="faq-ans"><div className="faq-ans-in">{item.a}</div></div>

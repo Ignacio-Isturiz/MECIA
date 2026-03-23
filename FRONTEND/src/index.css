@@ -204,7 +204,7 @@ body{background:var(--ink);color:var(--txt);font-family:var(--fb);font-size:15px
 .sh .body-md{max-width:440px;margin:0 auto}
 
 /* ══ FEAT CARDS ══ */
-.feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.feat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
 .fcard{background:var(--card);backdrop-filter:blur(16px);border:1px solid var(--bdr3);border-radius:18px;padding:30px;transition:border-color .25s,box-shadow .25s,transform .25s;cursor:pointer;position:relative;overflow:hidden}
 .fcard::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(0,200,150,.25),transparent);opacity:0;transition:opacity .3s}
 .fcard:hover::before{opacity:1}
@@ -224,6 +224,9 @@ body{background:var(--ink);color:var(--txt);font-family:var(--fb);font-size:15px
 .slot-ico svg{width:24px;height:24px;stroke:var(--g);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
 .slot-lbl{font-family:var(--fh);font-size:14px;font-weight:700;color:var(--t2);margin-bottom:5px}
 .slot-sub{font-size:11.5px;color:var(--t3)}
+.map-slot{padding:56px 14px 14px;align-items:stretch;justify-content:flex-start}
+.slot-map-wrap{width:100%;height:260px;border:1px solid var(--bdr3);border-radius:14px;overflow:hidden;background:var(--ink2);margin-bottom:12px}
+.slot-map-frame{width:100%;height:100%;border:0;display:block}
 
 /* ══ CASOS ══ */
 .casos-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}

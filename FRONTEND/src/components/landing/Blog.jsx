@@ -4,13 +4,6 @@ export default function Blog() {
   return (
     <section id="blog" className="sec-mid sp">
       <div className="w">
-        <div className="blog-hdr">
-          <div>
-            <div className="eye" style={{justifyContent:'flex-start'}}>Blog</div>
-            <h2 style={{fontFamily:'var(--fh)',fontSize:'clamp(24px,3.2vw,38px)',fontWeight:800,color:'var(--txt)',letterSpacing:'-.03em',marginTop:'10px',maxWidth:'420px',lineHeight:1.12}}>Noticias y análisis sobre <em style={{fontStyle:'italic',color:'var(--g)'}}>Medellín</em></h2>
-          </div>
-          <a href="#" className="btn btn-outline" style={{padding:'11px 24px',fontSize:'13px'}}>Ver todos →</a>
-        </div>
         <div className="blog-main">
           {[
             {

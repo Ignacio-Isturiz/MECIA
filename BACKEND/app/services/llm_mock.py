@@ -276,7 +276,6 @@ class LLMMockService:
             "data_source": "Criminalidad_por_Comuna_data.csv",
             "mock": True,
         }
-<<<<<<< Updated upstream
 
     def simulate_entrepreneur_chat(self, prompt: str) -> Dict[str, Any]:
         """Simula respuesta del chatbot de emprendedor."""
@@ -308,23 +307,3 @@ class LLMMockService:
             "provider": "openai-mock",
             "mock": True
         }
-=======
-    def _detect_activity(self, prompt_upper: str) -> str:
-        kws = {
-            'TROT': 'trotar',
-            'CORRER': 'trotar',
-            'NOCHE': 'salir de noche',
-            'COMPR': 'compras',
-            'CAF': 'tomar un café',
-            'CEN': 'salir a cenar',
-        }
-        for k, v in kws.items():
-            if k in prompt_upper:
-                return v
-        return ''
-
-
-    def _route_suggestion(self) -> str:
-        return "Ruta sugerida (general): usa las avenidas principales y zonas iluminadas; evita atajos y calles poco transitadas. 🛣️"
-
->>>>>>> Stashed changes

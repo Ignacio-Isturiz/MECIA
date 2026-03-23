@@ -276,14 +276,22 @@ export function initLandingPageAnimation(container) {
   /* ══ STATS ══ */
   ScrollTrigger.create({
     trigger: container.querySelector('.stats-strip'), start: 'top 82%', once: true, onEnter: () => {
-      [{ id: 's1', v: 12400, s: '+' }, { id: 's2', v: 48000, s: '+' }, { id: 's3', v: 380, s: '+' }].forEach(({ id, v, s }) => {
+      [
+        { id: 's1', v: 115, s: '', decimals: 0, compact: false },
+        { id: 's2', v: 190386, s: '', decimals: 0, compact: true },
+        { id: 's3', v: 102403, s: '', decimals: 0, compact: true }
+      ].forEach(({ id, v, s, decimals = 0, compact = true }) => {
         const el = container.querySelector('#' + id);
         if (!el) return;
         const o = { n: 0 };
         gsap.to(o, {
           n: v, duration: 2, ease: 'power2.out', onUpdate: () => {
-            let n = Math.round(o.n);
-            el.textContent = (n >= 1000 ? (n / 1000).toFixed(n >= 100000 ? 0 : 1) + 'k' : n) + s;
+            let n = decimals > 0 ? Number(o.n.toFixed(decimals)) : Math.round(o.n);
+            if (compact && n >= 1000) {
+              el.textContent = (n / 1000).toFixed(n >= 100000 ? 0 : 1) + 'k' + s;
+            } else {
+              el.textContent = n + s;
+            }
           }
         });
       });
@@ -307,6 +315,7 @@ export function initLandingPageAnimation(container) {
     const elements = container.querySelectorAll(sel);
     const triggerEl = container.querySelector(trig);
     if (elements.length && triggerEl) {
+      const keepVisible = sel === '.feat-card';
       gsap.fromTo(elements,
         { opacity: 0, y: 38, scale: .96 },
         {
@@ -316,7 +325,8 @@ export function initLandingPageAnimation(container) {
             trigger: triggerEl,
             start: 'top 86%',
             end: 'top 40%',
-            toggleActions: 'play none none reverse' // ← aparece al bajar, desaparece al subir
+            toggleActions: keepVisible ? 'play none none none' : 'play none none reverse',
+            once: keepVisible
           }
         }
       );

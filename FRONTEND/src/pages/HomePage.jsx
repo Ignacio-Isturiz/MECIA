@@ -6,8 +6,6 @@ import { initLandingPageAnimation } from './HomePageAnimation';
 import Hero from '@/components/landing/Hero';
 import { TrustedLogos, StatsStrip } from '@/components/landing/TrustedStats';
 import Features from '@/components/landing/Features';
-import UseCases from '@/components/landing/UseCases';
-import Services from '@/components/landing/Services';
 import FAQ from '@/components/landing/FAQ';
 import Footer from '@/components/landing/Footer';
 
@@ -50,9 +48,7 @@ export default function HomePage() {
         <nav className="nav-links">
           <a href="#" className="active">Inicio</a>
           <a href="#features">Plataforma</a>
-          <a href="#services">Servicios</a>
-          <a href="#blog">Blog</a>
-          <a href="#faq">FAQ</a>
+          <a href="#faq">Hecho para ti</a>
         </nav>
         <div className="nav-r">
           <button className="theme-btn" id="theme-btn">
@@ -76,8 +72,6 @@ export default function HomePage() {
       <TrustedLogos />
       <StatsStrip />
       <Features />
-      <UseCases />
-      <Services />
       <FAQ />
       <Footer />
     </div>
