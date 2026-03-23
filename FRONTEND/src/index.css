@@ -23,7 +23,7 @@
   --t2:rgba(255,255,255,0.72);
   --t3:rgba(255,255,255,0.44);
   --t4:rgba(255,255,255,0.22);
-  --nav-bg:rgba(5,8,16,0.78);
+  --nav-bg:transparent;
   --g:#00C896;--g2:#239677;--g3:rgba(0,200,150,0.07);--g4:rgba(0,200,150,0.15);
   --glow:rgba(0,200,150,0.35);--glow2:rgba(0,200,150,0.12);
   --blue-glow:rgba(30,100,255,0.12);
@@ -37,7 +37,7 @@
   --glass:rgba(15,23,42,0.04);--glass2:rgba(15,23,42,0.06);
   --bdr:rgba(0,150,118,0.18);--bdr2:rgba(0,150,118,0.10);--bdr3:rgba(15,23,42,0.08);
   --txt:#0A111F;--t2:rgba(10,17,31,0.70);--t3:rgba(10,17,31,0.44);--t4:rgba(10,17,31,0.22);
-  --nav-bg:rgba(244,247,252,0.88);
+  --nav-bg:transparent;
   --g:#009970;--g2:#1d7a5f;--g3:rgba(0,153,112,0.06);--g4:rgba(0,153,112,0.13);
   --glow:rgba(0,153,112,0.22);--glow2:rgba(0,153,112,0.08);
   --blue-glow:rgba(30,100,255,0.06);
@@ -86,10 +86,11 @@ body{background:var(--ink);color:var(--txt);font-family:var(--fb);font-size:15px
   position:fixed;top:0;left:0;right:0;z-index:500;
   display:flex;align-items:center;justify-content:space-between;
   padding:16px 52px;
-  background:var(--nav-bg);
-  backdrop-filter:blur(32px) saturate(1.9);
-  -webkit-backdrop-filter:blur(32px) saturate(1.9);
-  border-bottom:1px solid var(--bdr3);
+  background: transparent !important;
+  backdrop-filter:none !important;
+  -webkit-backdrop-filter:none !important;
+  border: none !important;
+  box-shadow: none !important;
   will-change:transform;
   transition:background .45s,border-color .45s;
 }
@@ -417,4 +418,13 @@ spline-viewer::part(logo),
   .blog-h{flex-direction:column}
   .blog-h-thumb{width:100%;min-width:0;height:160px;border-right:none;border-bottom:1px solid var(--bdr3)}
   .curve-circle{bottom:calc(50% - 24px);width:48px;height:48px}
+}
+
+::-webkit-scrollbar {
+  display: none;
+}
+
+/* Oculta scrollbar en Firefox */
+* {
+  scrollbar-width: none;
 }
