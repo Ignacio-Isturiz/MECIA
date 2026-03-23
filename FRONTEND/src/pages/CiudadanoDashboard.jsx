@@ -11,7 +11,7 @@ import MapaLeafletComunas from '@/components/MapaLeafletComunas';
 
 const NAV = [
   { id: 'inicio',    label: 'Inicio',        icon: <Icons.Dashboard /> },
-  { id: 'seguridad', label: 'Seguridad',     icon: <Icons.Shield /> },
+  { id: 'seguridad', label: 'Seguridad',     icon: <Icons.Shield />, chatbot:true },
   { id: 'servicios', label: 'Servicios EPM', icon: <Icons.Bolt /> },
   { id: 'noticias',  label: 'Noticias',      icon: <Icons.News /> },
 ];
@@ -209,14 +209,20 @@ function CriminalidadWidget() {
         <table className="db-table">
           <thead>
             <tr>
-              <th onClick={() => toggle('nombre')}>
-                Comuna {sort.key==='nombre'?(sort.dir==='asc'?'↑':'↓'):''}
+              <th>
+                <button type="button" className="db-th-sort-btn" onClick={() => toggle('nombre')} aria-label="Ordenar por comuna">
+                  Comuna {sort.key==='nombre'?(sort.dir==='asc'?'↑':'↓'):''}
+                </button>
               </th>
-              <th onClick={() => toggle('total_casos')} style={{textAlign:'right'}}>
-                Casos {sort.key==='total_casos'?(sort.dir==='asc'?'↑':'↓'):''}
+              <th style={{textAlign:'right'}}>
+                <button type="button" className="db-th-sort-btn right" onClick={() => toggle('total_casos')} aria-label="Ordenar por casos">
+                  Casos {sort.key==='total_casos'?(sort.dir==='asc'?'↑':'↓'):''}
+                </button>
               </th>
-              <th onClick={() => toggle('tasa_criminalidad')} style={{textAlign:'right'}}>
-                Tasa /100k {sort.key==='tasa_criminalidad'?(sort.dir==='asc'?'↑':'↓'):''}
+              <th style={{textAlign:'right'}}>
+                <button type="button" className="db-th-sort-btn right" onClick={() => toggle('tasa_criminalidad')} aria-label="Ordenar por tasa de criminalidad">
+                  Tasa /100k {sort.key==='tasa_criminalidad'?(sort.dir==='asc'?'↑':'↓'):''}
+                </button>
               </th>
             </tr>
           </thead>
@@ -468,9 +474,9 @@ export default function CiudadanoDashboard() {
     <>
       {/* Pills de acceso rápido */}
       <div className="db-filter-bar">
-        <div className="db-fpill" onClick={() => setMod('seguridad')}><span className="db-dot"/>Seguridad</div>
-        <div className="db-fpill" onClick={() => setMod('servicios')}>Servicios EPM</div>
-        <div className="db-fpill" onClick={() => setMod('noticias')}>Noticias</div>
+        <button type="button" className="db-fpill" onClick={() => setMod('seguridad')}><span className="db-dot"/>Seguridad</button>
+        <button type="button" className="db-fpill" onClick={() => setMod('servicios')}>Servicios EPM</button>
+        <button type="button" className="db-fpill" onClick={() => setMod('noticias')}>Noticias</button>
         <div className="db-fset"><Icons.Sliders/></div>
         <button className="db-btn-primary" onClick={() => setMod('seguridad')}>Consultar Guardián →</button>
       </div>
@@ -498,8 +504,13 @@ export default function CiudadanoDashboard() {
           { icon:<Icons.Bolt/>, title:'Servicios EPM', desc:'Análisis de facturas con GPT-4o Vision. Recomendaciones de ahorro y predicción.', action:()=>setMod('servicios') },
           { icon:<Icons.News/>, title:'Noticias',      desc:'Noticias verificadas de Medellín filtradas por categoría en tiempo real.',     action:()=>setMod('noticias') },
         ].map((item,i)=>(
-          <div key={i} className="db-card" onClick={item.action}
-            style={{cursor:'pointer',padding:'16px 18px',display:'flex',alignItems:'flex-start',gap:14}}
+          <button
+            key={i}
+            type="button"
+            className="db-card db-card-action"
+            onClick={item.action}
+            aria-label={`Abrir módulo ${item.title}`}
+            style={{cursor:'pointer',padding:'16px 18px',display:'flex',alignItems:'flex-start',gap:14,textAlign:'left'}}
           >
             <div style={{
               width:38,height:38,borderRadius:10,background:'var(--active-bg)',
@@ -513,7 +524,7 @@ export default function CiudadanoDashboard() {
               <div style={{fontSize:12.5,color:'var(--text-mid)',lineHeight:1.5}}>{item.desc}</div>
               <div style={{fontSize:11,color:'var(--accent)',fontWeight:600,marginTop:6}}>Abrir módulo →</div>
             </div>
-          </div>
+          </button>
         ))}
       </div>
     </>

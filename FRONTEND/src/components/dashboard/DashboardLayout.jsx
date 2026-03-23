@@ -1,12 +1,40 @@
 // src/components/dashboard/DashboardLayout.jsx
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTheme } from '@/hooks/useTheme';
+import AccessibilityHelpModal from '@/components/common/AccessibilityHelpModal';
 import '@/pages/Dashboard.css';
+
+function moveFocusWithArrows(event, selector) {
+  const keys = ['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp', 'Home', 'End'];
+  if (!keys.includes(event.key)) return;
+
+  const items = Array.from(event.currentTarget.querySelectorAll(selector));
+  if (!items.length) return;
+
+  const activeIndex = items.indexOf(document.activeElement);
+  if (activeIndex < 0) return;
+
+  event.preventDefault();
+
+  if (event.key === 'Home') {
+    items[0]?.focus();
+    return;
+  }
+
+  if (event.key === 'End') {
+    items[items.length - 1]?.focus();
+    return;
+  }
+
+  const delta = event.key === 'ArrowRight' || event.key === 'ArrowDown' ? 1 : -1;
+  const nextIndex = (activeIndex + delta + items.length) % items.length;
+  items[nextIndex]?.focus();
+}
 
 /* ── SVG Icons ── */
 export const Icons = {
-  Dashboard: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>,
+  Dashboard: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>,
   Shield: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>,
   Bolt: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,
   MapPin: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>,
@@ -29,9 +57,17 @@ export const Icons = {
 /* ── TabBar ── */
 export function TabBar({ tabs, active, onChange }) {
   return (
-    <div className="db-tab-bar">
+    <div className="db-tab-bar" role="tablist" aria-label="Pestañas" onKeyDown={(event) => moveFocusWithArrows(event, '[role="tab"]')}>
       {tabs.map(t => (
-        <button key={t.id} className={`db-tab${active === t.id ? ' active' : ''}`} onClick={() => onChange(t.id)}>
+        <button
+          key={t.id}
+          className={`db-tab${active === t.id ? ' active' : ''}`}
+          onClick={() => onChange(t.id)}
+          role="tab"
+          aria-selected={active === t.id}
+          aria-controls={`tabpanel-${t.id}`}
+          id={`tab-${t.id}`}
+        >
           {t.label}
         </button>
       ))}
@@ -61,6 +97,12 @@ export default function DashboardLayout({
   const [collapsed, setCollapsed] = useState(false);
   const { theme, toggle: toggleTheme } = useTheme();
 
+  useEffect(() => {
+    if (!window.announceToScreenReader) return;
+    const page = pageTitle || 'Panel';
+    window.announceToScreenReader(`Página cargada: ${page}. Usa Tab y flechas para navegar, Enter o Espacio para activar.`, true);
+  }, [pageTitle]);
+
   const initials = user?.full_name
     ? user.full_name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
     : '?';
@@ -70,12 +112,15 @@ export default function DashboardLayout({
   return (
     <>
       <div className="db-bg" />
+      <a href="#db-main-content" className="sr-only sr-only-focusable">
+        Saltar al contenido principal
+      </a>
       <div className="db-shell">
 
         {/* ══ SIDEBAR ══ */}
-        <aside className={`db-sidebar${collapsed ? ' collapsed' : ''}`}>
+        <aside className={`db-sidebar${collapsed ? ' collapsed' : ''}`} aria-label="Navegación lateral">
 
-          <Link to="/" className="db-logo">
+          <Link to="/" className="db-logo" aria-label="Ir al inicio de MECIA">
             <div className="db-logo-mark">
               <svg width="13" height="13" viewBox="0 0 36 36" fill="none">
                 <path d="M6 8C6 6.9 6.9 6 8 6H22C22 6 28 6 28 12V20" stroke="white" strokeWidth="3.4" strokeLinecap="round"/>
@@ -86,15 +131,15 @@ export default function DashboardLayout({
             <span className="db-logo-text">MECIA</span>
           </Link>
 
-          <div className="db-sidebar-user">
-            <div className="db-user-avatar" title={user?.full_name}>{initials}</div>
+          <div className="db-sidebar-user" role="region" aria-label="Información de usuario">
+            <div className="db-user-avatar" title={user?.full_name} aria-label={`Avatar de ${user?.full_name || 'usuario'}`}>{initials}</div>
             <div className="db-user-info">
               <div className="db-user-name">{user?.full_name}</div>
               <div className="db-user-role">{user?.role}</div>
             </div>
           </div>
 
-          <nav className="db-nav">
+          <nav className="db-nav" aria-label="Secciones principales" onKeyDown={(event) => moveFocusWithArrows(event, '.db-nav-item')}>
             {!collapsed && <div className="db-nav-section">Navegación</div>}
             {navItems.map(item => (
               <button
@@ -102,6 +147,9 @@ export default function DashboardLayout({
                 className={`db-nav-item${activeItem === item.id ? ' active' : ''}`}
                 onClick={() => onSelect(item.id)}
                 title={collapsed ? item.label : undefined}
+                aria-label={item.label}
+                aria-current={activeItem === item.id ? 'page' : undefined}
+                {...(item.chatbot && { 'data-chatbot-nav': 'true' })}
               >
                 <span className="db-nav-icon">{item.icon}</span>
                 <span className="db-nav-label">{item.label}</span>
@@ -111,10 +159,10 @@ export default function DashboardLayout({
 
           {/* Footer: solo colapsar y logout — sin toggle de tema */}
           <div className="db-sidebar-footer">
-            <button className="db-toggle-btn" onClick={() => setCollapsed(c => !c)} title={collapsed ? 'Expandir' : 'Colapsar'}>
+            <button className="db-toggle-btn" onClick={() => setCollapsed(c => !c)} title={collapsed ? 'Expandir' : 'Colapsar'} aria-label={collapsed ? 'Expandir barra lateral' : 'Colapsar barra lateral'}>
               <Icons.ChevronLeft />
             </button>
-            <button className="db-logout-btn" onClick={onLogout} title={collapsed ? 'Cerrar Sesión' : undefined}>
+            <button className="db-logout-btn" onClick={onLogout} title={collapsed ? 'Cerrar Sesión' : undefined} aria-label="Cerrar sesión">
               <span className="db-nav-icon"><Icons.LogOut /></span>
               <span className="db-nav-label">Cerrar Sesión</span>
             </button>
@@ -123,24 +171,25 @@ export default function DashboardLayout({
 
         {/* ══ MAIN ══ */}
         <div className="db-main">
-          <header className="db-topbar">
+          <header className="db-topbar" role="banner">
             <div className="db-breadcrumbs">
               <span>MECIA</span>
               <span className="bc-sep">›</span>
               <span className="bc-active">{breadcrumb || pageTitle}</span>
             </div>
             <div className="db-topbar-right">
-              <button className="db-icon-btn" title="Buscar"><Icons.Search /></button>
-              <button className="db-icon-btn dot" title="Notificaciones"><Icons.Bell /></button>
+              <button className="db-icon-btn" title="Buscar" aria-label="Buscar"><Icons.Search /></button>
+              <button className="db-icon-btn dot" title="Notificaciones" aria-label="Notificaciones"><Icons.Bell /></button>
+              <AccessibilityHelpModal />
               {/* Theme toggle — SOLO aquí, no en el sidebar */}
-              <button className="db-theme-toggle" onClick={toggleTheme} title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}>
+              <button className="db-theme-toggle" onClick={toggleTheme} title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'} aria-label={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'} aria-pressed={theme === 'dark'}>
                 {theme === 'dark' ? <Icons.Moon /> : <Icons.Sun />}
               </button>
               <div className="db-main-avatar" title={user?.full_name}>{initials}</div>
             </div>
           </header>
 
-          <div className="db-content">
+          <main className="db-content" id="db-main-content" tabIndex={-1}>
             <div className="db-col-l">
               {(pageTitle || pageSubtitle) && (
                 <div className="db-page-header">
@@ -155,8 +204,8 @@ export default function DashboardLayout({
               )}
               {mainContent}
             </div>
-            {colR && <div className="db-col-r">{colR}</div>}
-          </div>
+            {colR && <div className="db-col-r" role="complementary" aria-label="Panel complementario">{colR}</div>}
+          </main>
         </div>
       </div>
     </>
