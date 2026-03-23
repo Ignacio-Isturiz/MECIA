@@ -31,11 +31,7 @@ export default function Hero() {
           <div className="mk">
             <div className="mk-top">
               <div className="mk-logo-row">
-                <svg width="13" height="13" viewBox="0 0 36 36" fill="none">
-                  <path d="M6 8C6 6.9 6.9 6 8 6H22C22 6 28 6 28 12V20" stroke="var(--g)" strokeWidth="3.5" strokeLinecap="round"/>
-                  <path d="M6 8V28C6 29.1 6.9 30 8 30H28" stroke="var(--g)" strokeWidth="3.5" strokeLinecap="round"/>
-                  <circle cx="25" cy="10" r="3" fill="var(--g)"/>
-                </svg>
+                <img src="/mecialogo.png" alt="MECIA" style={{ height: '22px', width: 'auto' }} />
                 MECIA
               </div>
               <div className="mk-search">

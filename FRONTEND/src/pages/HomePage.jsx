@@ -38,14 +38,7 @@ export default function HomePage() {
       {/* ══ NAVBAR ══ */}
       <header id="nav">
         <Link className="logo" to="/">
-          <div className="logo-mark">
-            <svg width="16" height="16" viewBox="0 0 36 36" fill="none">
-              <path d="M6 8C6 6.9 6.9 6 8 6H22C22 6 28 6 28 12V20" stroke="white" strokeWidth="3.4" strokeLinecap="round"/>
-              <path d="M6 8V28C6 29.1 6.9 30 8 30H28" stroke="white" strokeWidth="3.4" strokeLinecap="round"/>
-              <circle cx="25" cy="10" r="3" fill="white"/>
-            </svg>
-          </div>
-          <span className="logo-text">MECIA</span>
+          <img src="/mecialogo.png" alt="MECIA" style={{ height: '36px', width: 'auto' }} />
         </Link>
         <nav className="nav-links">
           <a href="#" className="active">Inicio</a>
