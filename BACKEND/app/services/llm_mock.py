@@ -132,9 +132,9 @@ def _build_response(commune: str, info: Dict, data: Dict) -> str:
         alts = _safer_alternatives([commune], data, 3)
         alts_str = ", ".join(a.title() for a in alts[:-1]) + f" o {alts[-1].title()}"
         return (
-            f"¡Ten cuidado! {nombre_display} tiene una tasa de criminalidad bastante alta ({tasa:.1f}). "
-            f"Si vas a esa zona, hazlo idealmente acompañado/a y en horarios de mucha gente. "
-            f"Si tienes la posibilidad, considera ir mejor a {alts_str}, donde la seguridad es mucho mejor."
+            f"¡Ten cuidado! {nombre_display} tiene una tasa de criminalidad bastante alta ({tasa:.1f}). ⚠️ "
+            f"Si vas a esa zona, ve acompañado/a y evita calles poco iluminadas. 🚶‍♀️🌙 "
+            f"Como alternativa más segura podrías considerar {alts_str}."
         )
     # muy_peligrosa
     alts = _safer_alternatives([commune], data, 3)
@@ -148,15 +148,12 @@ def _build_response(commune: str, info: Dict, data: Dict) -> str:
 
 
 def _build_general_response(data: Dict) -> str:
-    safest = sorted(data.items(), key=lambda x: x[1]["tasa"])[:4]
-    riskiest = sorted(data.items(), key=lambda x: x[1]["tasa"], reverse=True)[:2]
-    safest_str = ", ".join(n.title() for n, _ in safest)
-    risky_str = " y ".join(n.title() for n, _ in riskiest)
+    # Produce a more natural, less robotic greeting. Only include explicit lists
+    # when the user asks for them; otherwise offer to provide a summary on request.
     return (
-        f"Hola, con gusto te ayudo con información de seguridad en Medellín. 🏙️\n\n"
-        f"Según los datos más recientes, las zonas más seguras son: {safest_str}.\n\n"
-        f"Por otro lado, las zonas con mayor índice de criminalidad son {risky_str}. "
-        f"Si me dices a qué barrio o comuna quieres ir, te doy una recomendación más específica."
+        "Hola, con gusto te ayudo con información de seguridad en Medellín. 🏙️\n\n"
+        "Puedo darte una recomendación concreta según la zona o, si prefieres, mostrar un breve resumen de las comunas más seguras y las que presentan más incidencia. "
+        "Dime a dónde piensas ir o si quieres el resumen y te lo doy de forma clara y práctica."
     )
 
 
@@ -237,7 +234,15 @@ class LLMMockService:
         elif len(mentioned) == 1:
             commune = mentioned[0]
             if commune in data:
+                activity = self._detect_activity(prompt_upper)
                 response = _build_response(commune, data[commune], data)
+                # Add lightweight NLP info: tailor to activity and suggest a safe route
+                if activity:
+                    response += f"\n\nConsejo para {activity}: procura hacerlo en horarios con más gente y por vías principales. {self._route_suggestion()}"
+                else:
+                    response += f"\n\n{self._route_suggestion()}"
+                # Offer estrato info on request
+                response += "\n\nSi quieres, puedo añadir información por estrato (cobertura y acceso a servicios)."
             else:
                 response = _build_general_response(data)
         else:
@@ -267,10 +272,11 @@ class LLMMockService:
 
         return {
             "output": response,
-            "comunas_detectadas": mentioned,
+                "comunas_detectadas": mentioned,
             "data_source": "Criminalidad_por_Comuna_data.csv",
             "mock": True,
         }
+<<<<<<< Updated upstream
 
     def simulate_entrepreneur_chat(self, prompt: str) -> Dict[str, Any]:
         """Simula respuesta del chatbot de emprendedor."""
@@ -302,3 +308,23 @@ class LLMMockService:
             "provider": "openai-mock",
             "mock": True
         }
+=======
+    def _detect_activity(self, prompt_upper: str) -> str:
+        kws = {
+            'TROT': 'trotar',
+            'CORRER': 'trotar',
+            'NOCHE': 'salir de noche',
+            'COMPR': 'compras',
+            'CAF': 'tomar un café',
+            'CEN': 'salir a cenar',
+        }
+        for k, v in kws.items():
+            if k in prompt_upper:
+                return v
+        return ''
+
+
+    def _route_suggestion(self) -> str:
+        return "Ruta sugerida (general): usa las avenidas principales y zonas iluminadas; evita atajos y calles poco transitadas. 🛣️"
+
+>>>>>>> Stashed changes
