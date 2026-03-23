@@ -43,6 +43,7 @@ class EmprendedorChatRequest(BaseModel):
 class TextToSpeechRequest(BaseModel):
     text: str = Field(min_length=1, max_length=700)
     voice: str = Field(default="alloy")
+    language: str = Field(default="es", pattern=r"^[a-z]{2}(-[A-Z]{2})?$")
 
 
 @router.get(
@@ -165,10 +166,18 @@ async def text_to_speech(payload: TextToSpeechRequest):
             "Authorization": f"Bearer {settings.OPENAI_API_KEY}",
             "Content-Type": "application/json",
         }
+        language = (payload.language or "es").strip().lower()
+        language_instruction = {
+            "es": "Speak in clear neutral Latin American Spanish.",
+            "es-co": "Speak in clear Colombian Spanish with natural pronunciation.",
+            "en": "Speak in clear neutral English.",
+        }.get(language, "Speak in clear neutral Latin American Spanish.")
+
         body = {
             "model": "gpt-4o-mini-tts",
             "voice": voice,
             "input": payload.text,
+            "instructions": language_instruction,
             "format": "mp3",
         }
 

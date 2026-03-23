@@ -8,6 +8,7 @@ import json
 import math
 import os
 import unicodedata
+import time
 from typing import Dict, Any, List, Optional
 from collections import defaultdict
 from app.core.geo_data import get_coordinates
@@ -68,27 +69,136 @@ COMUNA_NUMBER_TO_NAME = {
 
 DEFAULT_MEDELLIN_COORDS = [6.244, -75.574]
 
+_LOCATION_INTENT_KEYWORDS = {
+    "donde",
+    "dónde",
+    "en que parte",
+    "en qué parte",
+    "en que zona",
+    "en qué zona",
+    "en que barrio",
+    "en qué barrio",
+    "mejor zona",
+    "mejor barrio",
+    "mejores barrios",
+    "abrir",
+    "abriria",
+    "abriría",
+    "abro",
+    "abro negocio",
+    "monto",
+    "montar",
+    "montaria",
+    "montaría",
+    "montar negocio",
+    "instalar",
+    "instalarme",
+    "ubicar",
+    "ubicar negocio",
+    "ubicacion",
+    "ubicación",
+    "donde conviene",
+    "dónde conviene",
+    "conviene",
+    "rentable",
+    "rentabilidad",
+    "viable",
+    "negocio",
+    "emprender en",
+    "iniciar negocio",
+    "empezar negocio",
+    "local",
+    "zona",
+    "sector",
+    "sectores",
+    "barrio",
+    "barrios",
+    "comuna",
+    "comunas",
+    "viabilidad",
+    "emprender",
+    "emprendimiento",
+    "presupuesto",
+    "arriendo",
+    "canon",
+    "servicios",
+    "costos",
+    "coste",
+    "costo",
+}
+
+_MAP_INTENT_KEYWORDS = {
+    "mapa",
+    "ubicacion",
+    "ubicación",
+    "donde",
+    "dónde",
+    "mostrar mapa",
+    "muestrame en mapa",
+    "muéstrame en mapa",
+    "ver mapa",
+    "geografico",
+    "geográfico",
+    "densidad",
+    "distribucion",
+    "distribución",
+    "competencia por zona",
+}
+
+_COUNT_INTENT_KEYWORDS = {
+    "cuantas",
+    "cuántas",
+    "cuantos",
+    "cuántos",
+    "cantidad",
+    "numero",
+    "número",
+    "total",
+    "hay",
+}
+
+_CONTEXT_MAX_AREAS = 40
+
+_DATA_CACHE: Dict[str, Any] = {
+    "updated_at": 0.0,
+    "ttl_seconds": 600,
+    "source_signature": None,
+    "negocios": None,
+    "estructura": None,
+    "tariffs": None,
+    "negocio_types": None,
+}
+
 
 def _normalize_text(value: str) -> str:
     normalized = unicodedata.normalize("NFD", (value or "").lower().strip())
     return "".join(c for c in normalized if unicodedata.category(c) != "Mn")
 
 
-def _extract_relevant_types(prompt: str, negocios: Dict[str, Dict[str, Dict[str, int]]]) -> set[str]:
+def _extract_relevant_types(
+    prompt: str,
+    negocios: Dict[str, Dict[str, Dict[str, int]]],
+    negocio_types: Optional[set[str]] = None,
+) -> set[str]:
     prompt_norm = _normalize_text(prompt)
     relevant_types: set[str] = set()
 
-    for barrios in negocios.values():
-        for b_counts in barrios.values():
-            for negocio_type in b_counts.keys():
-                type_norm = _normalize_text(negocio_type)
-                # Match flexible para capturar singular/plural y variaciones simples.
-                if (
-                    type_norm in prompt_norm
-                    or (len(type_norm) > 4 and type_norm[:-1] in prompt_norm)
-                    or (len(prompt_norm) > 4 and prompt_norm in type_norm)
-                ):
-                    relevant_types.add(negocio_type)
+    all_types = negocio_types
+    if all_types is None:
+        all_types = set()
+        for barrios in negocios.values():
+            for b_counts in barrios.values():
+                all_types.update(b_counts.keys())
+
+    for negocio_type in all_types:
+        type_norm = _normalize_text(negocio_type)
+        # Match flexible para capturar singular/plural y variaciones simples.
+        if (
+            type_norm in prompt_norm
+            or (len(type_norm) > 4 and type_norm[:-1] in prompt_norm)
+            or (len(prompt_norm) > 4 and prompt_norm in type_norm)
+        ):
+            relevant_types.add(negocio_type)
 
     return relevant_types
 
@@ -103,8 +213,9 @@ def _normalize_comuna_for_coordinates(comuna_value: str) -> str:
 def _build_map_data_from_dataset(
     prompt: str,
     negocios: Dict[str, Dict[str, Dict[str, int]]],
+    negocio_types: Optional[set[str]] = None,
 ) -> Optional[Dict[str, Any]]:
-    relevant_types = _extract_relevant_types(prompt, negocios)
+    relevant_types = _extract_relevant_types(prompt, negocios, negocio_types)
     if not relevant_types:
         return None
 
@@ -132,6 +243,282 @@ def _build_map_data_from_dataset(
         "type": "markers",
         "locations": locations,
     }
+
+
+def _detect_map_intent(prompt: str) -> bool:
+    prompt_norm = _normalize_text(prompt)
+    return any(keyword in prompt_norm for keyword in _MAP_INTENT_KEYWORDS)
+
+
+def _detect_count_intent(prompt: str) -> bool:
+    prompt_norm = _normalize_text(prompt)
+    return any(keyword in prompt_norm for keyword in _COUNT_INTENT_KEYWORDS)
+
+
+def _extract_mentioned_commune(prompt: str) -> Optional[str]:
+    prompt_norm = _normalize_text(prompt)
+
+    for key, formal_name in COMUNA_MAPPING.items():
+        if _normalize_text(key) in prompt_norm:
+            return formal_name
+
+    for formal_name in COMUNA_MAPPING.values():
+        if _normalize_text(formal_name) in prompt_norm:
+            return formal_name
+
+    # Soporte para referencia numérica "comuna 14"
+    for num, name in COMUNA_NUMBER_TO_NAME.items():
+        if f"comuna {num}" in prompt_norm:
+            return name
+
+    return None
+
+
+def _build_fast_count_response(
+    prompt: str,
+    negocios: Dict[str, Dict[str, Dict[str, int]]],
+    negocio_types: set[str],
+    mentioned_commune: Optional[str],
+    map_intent: bool,
+) -> Optional[Dict[str, Any]]:
+    if not _detect_count_intent(prompt):
+        return None
+
+    relevant_types = _extract_relevant_types(prompt, negocios, negocio_types)
+    if not relevant_types:
+        return None
+
+    tipo_texto = ", ".join(sorted(relevant_types))
+
+    if mentioned_commune and mentioned_commune in negocios:
+        barrio_counts = []
+        for barrio, counts in negocios[mentioned_commune].items():
+            count = sum(counts.get(t, 0) for t in relevant_types)
+            if count > 0:
+                barrio_counts.append((barrio, count))
+
+        total = sum(count for _, count in barrio_counts)
+        top_barrios = sorted(barrio_counts, key=lambda x: -x[1])[:5]
+
+        if total == 0:
+            texto = f"No encontré registros de {tipo_texto} en {mentioned_commune} según el dataset disponible."
+        else:
+            top_txt = "; ".join(f"{b} ({c})" for b, c in top_barrios) if top_barrios else "sin detalle por barrio"
+            texto = (
+                f"En {mentioned_commune} hay aproximadamente {total} registros de {tipo_texto}. "
+                f"Barrios con mayor concentración: {top_txt}."
+            )
+    else:
+        comuna_counts = defaultdict(int)
+        for comuna, barrios in negocios.items():
+            for _, counts in barrios.items():
+                comuna_counts[comuna] += sum(counts.get(t, 0) for t in relevant_types)
+
+        total = sum(comuna_counts.values())
+        top_comunas = sorted(
+            [(c, n) for c, n in comuna_counts.items() if n > 0],
+            key=lambda x: -x[1],
+        )[:5]
+
+        if total == 0:
+            texto = f"No encontré registros de {tipo_texto} en Medellín con los datos actuales."
+        else:
+            top_txt = "; ".join(f"{c} ({n})" for c, n in top_comunas) if top_comunas else "sin detalle por comuna"
+            texto = (
+                f"En Medellín hay aproximadamente {total} registros de {tipo_texto}. "
+                f"Comunas con mayor concentración: {top_txt}."
+            )
+
+    map_data = _build_map_data_from_dataset(prompt, negocios, negocio_types) if map_intent else None
+
+    return {
+        "output": texto,
+        "recomendaciones_especificas": [
+            "Si quieres, te comparo 2 barrios con menor competencia y mejor dinámica comercial para abrir tu negocio."
+        ],
+        "prediccion_costo_mensual": {},
+        "map_data": map_data,
+    }
+
+
+def _enrich_map_locations(map_data: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    if not map_data or map_data.get("type") != "markers":
+        return map_data
+
+    locations = map_data.get("locations", [])
+    enriched_locations = []
+    index_by_comuna = defaultdict(int)
+    coords_cache: Dict[str, List[float]] = {}
+
+    for loc in locations:
+        barrio = loc.get("name", "")
+        comuna = _normalize_comuna_for_coordinates(loc.get("comuna", ""))
+        # Priorizar buscar por comuna para obtener el centro
+        coords = coords_cache.get(comuna)
+        if not coords:
+            coords = get_coordinates(comuna) or get_coordinates(barrio)
+            if coords:
+                coords_cache[comuna] = coords
+        if not coords:
+            # Nunca descartamos puntos del mapa; fallback al centro de Medellin.
+            coords = DEFAULT_MEDELLIN_COORDS
+
+        # Distribuye barrios por comuna en una espiral para evitar solapes.
+        idx = index_by_comuna[comuna]
+        index_by_comuna[comuna] += 1
+
+        slots_per_ring = 8
+        ring = (idx // slots_per_ring) + 1
+        slot = idx % slots_per_ring
+        angle = (2 * math.pi * slot / slots_per_ring) + (ring * 0.35)
+        radius = 0.0035 * ring
+
+        lat_offset = radius * math.sin(angle)
+        lng_offset = radius * math.cos(angle)
+
+        loc["lat"] = coords[0] + lat_offset
+        loc["lng"] = coords[1] + lng_offset
+        # El nombre para el popup será "Barrio, Comuna"
+        loc["comuna"] = comuna
+        loc["name"] = f"{barrio} ({comuna})" if comuna else barrio
+        enriched_locations.append(loc)
+
+    map_data["locations"] = enriched_locations
+    return map_data
+
+
+def _detect_business_location_intent(prompt: str) -> bool:
+    prompt_norm = _normalize_text(prompt)
+    return any(keyword in prompt_norm for keyword in _LOCATION_INTENT_KEYWORDS)
+
+
+def _build_two_barrios_candidates(
+    prompt: str,
+    negocios: Dict[str, Dict[str, Dict[str, int]]],
+    estructura: Dict[str, Dict[str, int]],
+    negocio_types: Optional[set[str]] = None,
+) -> List[Dict[str, Any]]:
+    """
+    Selecciona 2 barrios candidatos usando un score que combina:
+    - Menor competencia directa (tipo de negocio consultado)
+    - Dinamismo comercial del barrio (total negocios)
+    - Actividad empresarial de la comuna
+    """
+    relevant_types = _extract_relevant_types(prompt, negocios, negocio_types)
+
+    comuna_activity_totals = {
+        comuna: sum(activities.values())
+        for comuna, activities in estructura.items()
+    }
+    max_comuna_activity = max(comuna_activity_totals.values(), default=1)
+
+    candidates: List[Dict[str, Any]] = []
+
+    for comuna, barrios in negocios.items():
+        comuna_activity_norm = comuna_activity_totals.get(comuna, 0) / max_comuna_activity
+        for barrio, counts in barrios.items():
+            total_barrio = sum(counts.values())
+            diversidad = sum(1 for value in counts.values() if value > 0)
+
+            if relevant_types:
+                competencia_directa = sum(counts.get(t, 0) for t in relevant_types)
+                if competencia_directa <= 0:
+                    continue
+            else:
+                # Fallback para prompts sin tipo de negocio explícito.
+                competencia_directa = total_barrio
+
+            # Menos competencia directa aumenta el score, con saturación logarítmica.
+            competition_factor = 1 / (1 + math.log1p(max(competencia_directa, 1)))
+            activity_factor = min(total_barrio / 400.0, 1.0)
+            diversity_factor = min(diversidad / 30.0, 1.0)
+
+            score = (
+                (0.55 * competition_factor)
+                + (0.30 * activity_factor)
+                + (0.15 * comuna_activity_norm)
+                + (0.05 * diversity_factor)
+            )
+
+            candidates.append(
+                {
+                    "barrio": barrio,
+                    "comuna": comuna,
+                    "competencia_directa": competencia_directa,
+                    "total_negocios_barrio": total_barrio,
+                    "score": round(score, 4),
+                }
+            )
+
+    candidates.sort(
+        key=lambda x: (
+            -x["score"],
+            x["competencia_directa"],
+            -x["total_negocios_barrio"],
+            x["comuna"],
+            x["barrio"],
+        )
+    )
+    return candidates[:2]
+
+
+def _estimate_epm_monthly_total(estrato: str, tariffs: Dict[str, Dict[str, Dict[str, float]]]) -> float:
+    total_est = 0.0
+    if estrato in tariffs.get("energia", {}):
+        total_est += tariffs["energia"][estrato].get("cargo_promedio", 0) * 100
+    if estrato in tariffs.get("acueducto", {}):
+        total_est += tariffs["acueducto"][estrato].get("cargo_promedio", 0) * 20
+    if estrato in tariffs.get("gas", {}):
+        total_est += tariffs["gas"][estrato].get("cargo_promedio", 0) * 10
+    return total_est
+
+
+def _build_startup_tips(
+    relevant_types: set[str],
+    top_barrios: List[Dict[str, Any]],
+    tariffs: Dict[str, Dict[str, Dict[str, float]]],
+) -> List[str]:
+    tipo_texto = ", ".join(sorted(relevant_types)) if relevant_types else "tu categoría de negocio"
+    estrato_3 = _estimate_epm_monthly_total("3", tariffs)
+    estrato_4 = _estimate_epm_monthly_total("4", tariffs)
+
+    tips = [
+        (
+            f"Haz un piloto de 2 semanas en {top_barrios[0]['barrio']} y {top_barrios[1]['barrio']} "
+            f"midiendo flujo peatonal por franja horaria y ticket promedio para validar demanda real de {tipo_texto}."
+        ),
+        (
+            f"Usa la competencia directa del dataset para diferenciar oferta: "
+            f"{top_barrios[0]['barrio']} ({top_barrios[0]['competencia_directa']}) vs "
+            f"{top_barrios[1]['barrio']} ({top_barrios[1]['competencia_directa']})."
+        ),
+        (
+            f"Calcula tu punto de equilibrio incluyendo servicios EPM: estrato 3 ~${estrato_3:,.0f}/mes "
+            f"y estrato 4 ~${estrato_4:,.0f}/mes según tarifas del dataset."
+        ),
+    ]
+    return tips
+
+
+def _append_top_barrios_summary(
+    base_text: str,
+    top_barrios: List[Dict[str, Any]],
+    relevant_types: set[str],
+) -> str:
+    if len(top_barrios) < 2:
+        return base_text
+
+    tipo_texto = ", ".join(sorted(relevant_types)) if relevant_types else "tu negocio"
+    section = (
+        "\n\nBarrios priorizados con datos reales (exactamente 2):\n"
+        f"1) {top_barrios[0]['barrio']} ({top_barrios[0]['comuna']}): "
+        f"{top_barrios[0]['competencia_directa']} negocios de {tipo_texto} y "
+        f"{top_barrios[0]['total_negocios_barrio']} negocios totales en el barrio.\n"
+        f"2) {top_barrios[1]['barrio']} ({top_barrios[1]['comuna']}): "
+        f"{top_barrios[1]['competencia_directa']} negocios de {tipo_texto} y "
+        f"{top_barrios[1]['total_negocios_barrio']} negocios totales en el barrio."
+    )
+    return f"{(base_text or '').strip()}{section}"
 
 
 def _load_negocios_data() -> Dict[str, Dict[str, Dict[str, int]]]:
@@ -320,8 +707,13 @@ def _build_context_for_llm(prompt: str, negocios: Dict, estructura: Dict, tariff
         
         # Mostrar todos los barrios con conteo positivo
         # Formato: [BARRIO] ([COMUNA]): [COUNT]
-        for (comm, barrio), count in sorted(area_counts.items(), key=lambda x: -x[1]):
+        sorted_areas = sorted(area_counts.items(), key=lambda x: -x[1])
+        for (comm, barrio), count in sorted_areas[:_CONTEXT_MAX_AREAS]:
             context_lines.append(f"  - {barrio} ({comm}): {count} negocios aprox.")
+        if len(sorted_areas) > _CONTEXT_MAX_AREAS:
+            context_lines.append(
+                f"  - ... y {len(sorted_areas) - _CONTEXT_MAX_AREAS} barrios adicionales (disponibles para mapa)."
+            )
         context_lines.append("")
 
     # Sección 2: Detalle por comuna si se menciona o si hay tipos relevantes
@@ -376,6 +768,9 @@ CONTEXTO DE DATOS DISPONIBLES DE MEDELLÍN:
 INSTRUCCIONES DE RESPUESTA:
 - Responde en español natural, amigable y motivador.
 - Si el usuario pregunta por ubicaciones o cantidades de negocios en Medellín (ej: cuántas panaderías hay), DEBES incluir un campo "map_data" en el JSON.
+- Si la consulta es de viabilidad, ubicación o apertura de negocio, recomienda EXACTAMENTE 2 barrios prioritarios.
+- Para cada uno de esos 2 barrios, justifica con datos concretos del contexto (cantidad de negocios del tipo consultado y/o actividad empresarial de la comuna).
+- En "recomendaciones_especificas" incluye mínimo 3 tips accionables para iniciar el negocio, basados en los datasets de negocios, estructura empresarial y tarifas EPM.
 - El campo "map_data" debe tener el tipo "markers" y una lista de "locations".
 - CADA location debe tener: "name" (Nombre del Barrio), "comuna" (Nombre de la Comuna) y "count" (cantidad de negocios).
 - IMPORTANTE: Incluye TODOS los barrios que el contexto indique que tienen ese tipo de negocio. No omitas ninguno. Queremos ver la densidad total en el mapa.
@@ -405,6 +800,54 @@ def _build_system_prompt(prompt: str, negocios: Dict, estructura: Dict, tariffs:
     return _SYSTEM_PROMPT_TEMPLATE.format(datos_contexto=contexto)
 
 
+def _compute_source_signature() -> tuple[float, float, float]:
+    return (
+        os.path.getmtime(_NEGOCIOS_PATH),
+        os.path.getmtime(_ESTRUCTURA_PATH),
+        os.path.getmtime(_TARIFA_ENERGIA_PATH) + os.path.getmtime(_TARIFA_ACUEDUCTO_PATH) + os.path.getmtime(_TARIFA_GAS_PATH),
+    )
+
+
+def _get_cached_datasets() -> Dict[str, Any]:
+    now = time.time()
+    try:
+        signature = _compute_source_signature()
+    except Exception:
+        signature = None
+
+    should_reload = (
+        _DATA_CACHE["negocios"] is None
+        or _DATA_CACHE["estructura"] is None
+        or _DATA_CACHE["tariffs"] is None
+        or (_DATA_CACHE["source_signature"] != signature)
+        or (now - _DATA_CACHE["updated_at"] > _DATA_CACHE["ttl_seconds"])
+    )
+
+    if should_reload:
+        negocios = _load_negocios_data()
+        estructura = _load_estructura_empresarial()
+        tariffs = _load_epm_tariffs()
+
+        negocio_types: set[str] = set()
+        for barrios in negocios.values():
+            for b_counts in barrios.values():
+                negocio_types.update(b_counts.keys())
+
+        _DATA_CACHE["negocios"] = negocios
+        _DATA_CACHE["estructura"] = estructura
+        _DATA_CACHE["tariffs"] = tariffs
+        _DATA_CACHE["negocio_types"] = negocio_types
+        _DATA_CACHE["source_signature"] = signature
+        _DATA_CACHE["updated_at"] = now
+
+    return {
+        "negocios": _DATA_CACHE["negocios"],
+        "estructura": _DATA_CACHE["estructura"],
+        "tariffs": _DATA_CACHE["tariffs"],
+        "negocio_types": _DATA_CACHE["negocio_types"] or set(),
+    }
+
+
 async def _call_openai(prompt: str, system_prompt: str, api_key: str) -> Dict:
     from openai import AsyncOpenAI
 
@@ -415,7 +858,7 @@ async def _call_openai(prompt: str, system_prompt: str, api_key: str) -> Dict:
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": prompt},
         ],
-        max_tokens=15000,
+        max_tokens=2200,
         temperature=0.7,
         response_format={"type": "json_object"},
     )
@@ -450,9 +893,29 @@ async def entrepreneur_chat_real(
     Chatbot de emprendedor con contexto de negocios, estructura empresarial y tarifas.
     Retorna recomendaciones específicas basadas en datos reales.
     """
-    negocios = _load_negocios_data()
-    estructura = _load_estructura_empresarial()
-    tariffs = _load_epm_tariffs()
+    cached = _get_cached_datasets()
+    negocios = cached["negocios"]
+    estructura = cached["estructura"]
+    tariffs = cached["tariffs"]
+    negocio_types = cached["negocio_types"]
+
+    map_intent = _detect_map_intent(prompt)
+    location_intent = _detect_business_location_intent(prompt)
+    mentioned_commune = _extract_mentioned_commune(prompt)
+
+    fast_count_result = _build_fast_count_response(
+        prompt=prompt,
+        negocios=negocios,
+        negocio_types=negocio_types,
+        mentioned_commune=mentioned_commune,
+        map_intent=map_intent,
+    )
+    if fast_count_result is not None:
+        fast_count_result["map_data"] = _enrich_map_locations(fast_count_result.get("map_data"))
+        fast_count_result["model"] = "fast-rule-engine"
+        fast_count_result["provider"] = "deterministic"
+        fast_count_result["mock"] = False
+        return fast_count_result
 
     system_prompt = _build_system_prompt(prompt, negocios, estructura, tariffs)
 
@@ -473,43 +936,30 @@ async def entrepreneur_chat_real(
             raise ValueError("No hay API key configurada para ningún proveedor LLM.")
 
         # Blindaje: construir map_data de forma determinística desde el dataset.
-        deterministic_map_data = _build_map_data_from_dataset(prompt, negocios)
+        deterministic_map_data = _build_map_data_from_dataset(prompt, negocios, negocio_types) if map_intent else None
+        relevant_types = _extract_relevant_types(prompt, negocios, negocio_types)
+        top_barrios = _build_two_barrios_candidates(prompt, negocios, estructura, negocio_types) if location_intent else []
+
+        if location_intent and len(top_barrios) == 2:
+            llm_result["texto"] = _append_top_barrios_summary(
+                llm_result.get("texto", ""),
+                top_barrios,
+                relevant_types,
+            )
+
+            deterministic_tips = _build_startup_tips(relevant_types, top_barrios, tariffs)
+            existing_tips = [t for t in llm_result.get("recomendaciones_especificas", []) if isinstance(t, str)]
+            merged_tips: List[str] = []
+            for tip in existing_tips + deterministic_tips:
+                normalized_tip = tip.strip()
+                if normalized_tip and normalized_tip not in merged_tips:
+                    merged_tips.append(normalized_tip)
+            llm_result["recomendaciones_especificas"] = merged_tips[:5]
 
         # Enriquecer map_data con coordenadas
-        map_data = deterministic_map_data or llm_result.get("map_data")
-        if map_data and map_data.get("type") == "markers":
-            locations = map_data.get("locations", [])
-            enriched_locations = []
-            index_by_comuna = defaultdict(int)
-            for loc in locations:
-                barrio = loc.get("name", "")
-                comuna = _normalize_comuna_for_coordinates(loc.get("comuna", ""))
-                # Priorizar buscar por comuna para obtener el centro
-                coords = get_coordinates(comuna) or get_coordinates(barrio)
-                if not coords:
-                    # Nunca descartamos puntos del mapa; fallback al centro de Medellin.
-                    coords = DEFAULT_MEDELLIN_COORDS
-
-                # Distribuye barrios por comuna en una espiral para evitar solapes.
-                idx = index_by_comuna[comuna]
-                index_by_comuna[comuna] += 1
-
-                slots_per_ring = 8
-                ring = (idx // slots_per_ring) + 1
-                slot = idx % slots_per_ring
-                angle = (2 * math.pi * slot / slots_per_ring) + (ring * 0.35)
-                radius = 0.0035 * ring
-
-                lat_offset = radius * math.sin(angle)
-                lng_offset = radius * math.cos(angle)
-
-                loc["lat"] = coords[0] + lat_offset
-                loc["lng"] = coords[1] + lng_offset
-                # El nombre para el popup será "Barrio, Comuna"
-                loc["comuna"] = comuna
-                loc["name"] = f"{barrio} ({comuna})" if comuna else barrio
-                enriched_locations.append(loc)
-            map_data["locations"] = enriched_locations
+        llm_map_data = llm_result.get("map_data") if map_intent else None
+        map_data = deterministic_map_data or llm_map_data
+        map_data = _enrich_map_locations(map_data)
 
         return {
             "output": llm_result.get("texto", ""),

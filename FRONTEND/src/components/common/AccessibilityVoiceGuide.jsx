@@ -32,6 +32,7 @@ export default function AccessibilityVoiceGuide() {
   
   // Voz predeterminada - Nova es clara y natural para usuarios ciegos
   const voice = "nova";
+  const language = "es-CO";
 
   const lastTextRef = useRef("");
   const lastAtRef = useRef(0);
@@ -63,11 +64,11 @@ export default function AccessibilityVoiceGuide() {
     setStatus(`Leyendo: ${text}`);
 
     try {
-      const cacheKey = `${voice}:${text}`;
+      const cacheKey = `${voice}:${language}:${text}`;
       let objectUrl = cacheRef.current.get(cacheKey);
 
       if (!objectUrl) {
-        const blob = await llmService.textToSpeech({ text, voice });
+        const blob = await llmService.textToSpeech({ text, voice, language });
         objectUrl = URL.createObjectURL(blob);
         cacheRef.current.set(cacheKey, objectUrl);
       }
