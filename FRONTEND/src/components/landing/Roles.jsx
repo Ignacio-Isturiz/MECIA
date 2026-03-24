@@ -26,8 +26,8 @@ export default function Roles() {
               <p className="role-subtitle">Tu ciudad en tiempo real</p>
               <ul className="role-list">
                 <li>Mapa de seguridad en directo</li>
-                <li>Estado del Metro y transporte</li>
-                <li>Alertas SIATA</li>
+                <li>Sugerencias para tus planes</li>
+                <li>Novedades de medellín</li>
                 <li>Tu factura EPM</li>
                 <li>Chatbot Guardián 24/7</li>
               </ul>
@@ -54,8 +54,8 @@ export default function Roles() {
               <ul className="role-list">
                 <li>Análisis de afluencia zonal</li>
                 <li>Indicadores de seguridad por zona</li>
-                <li>Tendencias de movilidad</li>
-                <li>Reportes de servicios públicos</li>
+                <li>Tendencias de costos de servicios</li>
+                <li>Mapa de ruta para empezar tu negocio</li>
                 <li>Comparativa entre comunas</li>
               </ul>
             </div>
