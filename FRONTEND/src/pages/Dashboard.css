@@ -150,7 +150,8 @@ body:has(.db-shell) { display:flex; align-items:center; justify-content:center; 
   position:relative; z-index:10;
   display:flex;
   width: min(1800px, 98vw);
-  height: min(920px, 96vh);
+  height: min(920px, 96dvh);
+  max-height: 100dvh;
   border-radius:26px;
   overflow:hidden;
   background: var(--app-bg);
@@ -361,6 +362,7 @@ body:has(.db-shell) { display:flex; align-items:center; justify-content:center; 
   flex:1; display:grid;
   grid-template-columns:1fr 360px;
   overflow:hidden;
+  min-height:0;
   gap:0;
 }
 .db-content--full {
@@ -379,6 +381,7 @@ body:has(.db-shell) { display:flex; align-items:center; justify-content:center; 
   padding:0 28px 20px 0;
   display:flex; flex-direction:column; gap:12px;
   overflow-y:auto; overflow-x:hidden;
+  min-height:0;
 }
 .db-col-r::-webkit-scrollbar { display:none; }
 /* Last card always fills remaining space */
@@ -480,7 +483,18 @@ body:has(.db-shell) { display:flex; align-items:center; justify-content:center; 
 /* ════════════════════════════════
    FILTER BAR (G.Take .fpill)
 ════════════════════════════════ */
-.db-filter-bar { display:flex; align-items:center; gap:8px; flex-shrink:0; }
+.db-filter-bar {
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex-shrink:0;
+  min-width:0;
+  overflow-x:auto;
+  overflow-y:hidden;
+  padding-bottom:2px;
+  -webkit-overflow-scrolling:touch;
+}
+.db-filter-bar > * { flex:0 0 auto; }
 .db-fpill {
   display:flex; align-items:center; gap:7px;
   padding:9px 17px; background:var(--card-bg);
@@ -512,6 +526,7 @@ body:has(.db-shell) { display:flex; align-items:center; justify-content:center; 
   backdrop-filter:blur(16px); border:1px solid rgba(0,200,150,.50);
   border-radius:100px; color:#0F172A; font-family:inherit;
   font-size:14px; font-weight:700; cursor:pointer;
+  white-space:nowrap;
   box-shadow:0 4px 22px var(--accent-glow), inset 0 1px 0 rgba(255,255,255,.20);
   transition:all .2s;
 }
@@ -575,6 +590,7 @@ body:has(.db-shell) { display:flex; align-items:center; justify-content:center; 
   display:grid; grid-template-columns:repeat(auto-fit, minmax(110px,1fr));
   gap:10px; margin-top:14px;
 }
+.db-stat-row--4 { grid-template-columns:repeat(4,minmax(0,1fr)); }
 .db-stat-item {
   background:var(--card-bg); backdrop-filter:blur(8px);
   border:1px solid var(--card-border); border-radius:12px; padding:12px 14px;
@@ -687,19 +703,21 @@ body:has(.db-shell) { display:flex; align-items:center; justify-content:center; 
    CONVERSATION LIST
 ════════════════════════════════ */
 .db-convlist {
-  width:210px; min-width:210px;
-  background:rgba(6,11,28,.55); backdrop-filter:blur(20px);
-  border-right:1px solid var(--sep);
-  display:flex; flex-direction:column; overflow:hidden;
+  width: 100%;
+  flex: 1;
+  display: flex; flex-direction: column; overflow: hidden;
+  background: transparent;
+  border: none;
 }
-.db-convlist-header { padding:14px 12px; border-bottom:1px solid var(--sep); }
+.db-convlist-header { padding:14px 12px; border-bottom:1px solid rgba(0,200,150,.15); }
 .db-new-chat-btn {
   width:100%; padding:9px 12px;
   background:var(--accent); color:#0F172A; border:none; border-radius:9px;
   cursor:pointer; font-weight:700; font-size:13px; font-family:'Inter',sans-serif; transition:all .2s;
+  white-space: nowrap;
 }
 .db-new-chat-btn:hover { filter:brightness(1.08); transform:translateY(-1px); }
-.db-convlist-body { flex:1; overflow-y:auto; padding:8px; }
+.db-convlist-body { flex:1; overflow-y:auto; overflow-x:hidden; padding:8px; }
 .db-convlist-body::-webkit-scrollbar { width:3px; }
 .db-convlist-body::-webkit-scrollbar-thumb { background:rgba(255,255,255,.10); border-radius:2px; }
 .db-conv-item {
@@ -1014,11 +1032,97 @@ body:has(.db-shell) { display:flex; align-items:center; justify-content:center; 
 
 /* Insights — mini stat cards Tailwind override via selectors */
 .db-insights-stats { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:16px; }
+.db-insights-stats--4 { grid-template-columns:repeat(4,minmax(0,1fr)); }
 .db-insights-stat {
   background:var(--card-bg); border:1px solid var(--card-border); border-radius:12px; padding:12px 14px;
 }
 .db-insights-stat-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--text-dim); margin-bottom:4px; }
 .db-insights-stat-value { font-family:'Montserrat',sans-serif; font-size:19px; font-weight:800; color:var(--text-h); }
+
+/* Shared responsive grids used by both dashboards */
+.db-mini-stats-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.db-inicio-split { display:grid; grid-template-columns:1.6fr 1fr; gap:14px; }
+.db-modules-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.db-tarifas-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+.db-negocios-split { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.db-sectores-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.db-comunas-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; }
+.db-market-legend { display:grid; grid-template-columns:1fr 1fr; gap:4px 14px; }
+
+/* Emprendedor right column: participacion + contexto */
+.db-sector-share-card { padding:14px 16px; }
+.db-sector-share-bar {
+  height:8px;
+  border-radius:999px;
+  display:flex;
+  overflow:hidden;
+  gap:1px;
+  margin-bottom:12px;
+}
+.db-sector-share-rest { flex:1; background:rgba(255,255,255,.07); }
+.db-sector-share-item {
+  display:grid;
+  grid-template-columns:auto 1fr auto;
+  gap:8px;
+  align-items:center;
+  margin-bottom:7px;
+}
+.db-sector-share-dot {
+  width:8px;
+  height:8px;
+  border-radius:2px;
+  flex-shrink:0;
+}
+.db-sector-share-name {
+  font-size:11.5px;
+  color:var(--text-mid);
+  line-height:1.35;
+  display:-webkit-box;
+  -webkit-line-clamp:1;
+  -webkit-box-orient:vertical;
+  overflow:hidden;
+}
+.db-sector-share-pct {
+  font-size:11.5px;
+  font-weight:700;
+  color:var(--text-h);
+  flex-shrink:0;
+}
+
+.db-market-context-card { padding:14px 16px; }
+.db-market-context-list {
+  display:flex;
+  flex-direction:column;
+  gap:0;
+  flex:1;
+}
+.db-market-context-item {
+  display:flex;
+  gap:10px;
+  align-items:flex-start;
+  padding:8px 0;
+}
+.db-market-context-icon {
+  font-size:16px;
+  flex-shrink:0;
+  margin-top:2px;
+}
+.db-market-context-title {
+  font-size:12px;
+  font-weight:700;
+  color:var(--text-h);
+  margin-bottom:2px;
+}
+.db-market-context-desc {
+  font-size:11.5px;
+  color:var(--text-mid);
+  line-height:1.45;
+}
+
+.db-market-dist-card {
+  flex-shrink:0;
+  overflow:hidden;
+}
 
 /* ════════════════════════════════
    EDIT BTN
@@ -1275,27 +1379,177 @@ body:has(.db-shell) { display:flex; align-items:center; justify-content:center; 
    RESPONSIVE
 ════════════════════════════════ */
 @media(max-width:1200px){
-  .db-content { grid-template-columns:1fr 300px; }
-  .db-shell { width:100vw; height:100vh; border-radius:0; }
+  .db-shell { width:100vw; height:100dvh; border-radius:0; }
+  .db-content { grid-template-columns:1fr 320px; }
+  .db-col-l { padding:6px 22px 18px 24px; }
+  .db-col-r { padding:0 18px 18px 0; }
 }
-@media(max-width:900px){
-  .db-shell { width:100vw; height:100vh; border-radius:0; }
-  .db-sidebar { position:absolute; z-index:200; height:100%; }
+
+@media(max-width:1024px){
   .db-content { grid-template-columns:1fr; }
   .db-col-r { display:none; }
-  .db-col-l { padding:6px 16px 20px; }
-  .db-topbar { padding:14px 16px 10px; }
-  .db-page-title { font-size:clamp(22px,5vw,32px); }
+  .db-col-l { padding:8px 18px 18px; }
 }
-@media(max-width:600px){
-  .db-sidebar { width:200px; min-width:200px; }
-  .db-sidebar.collapsed { width:52px; min-width:52px; }
-  .db-topbar { padding:10px 12px 8px; }
-  .db-stat-row { grid-template-columns:1fr 1fr; }
-  .db-insights-stats { grid-template-columns:1fr 1fr; }
+
+@media(max-width:900px){
+  .db-shell { flex-direction:column; overflow:hidden; }
+
+  .db-sidebar {
+    width:100%; min-width:0; height:auto;
+    border-right:none; border-bottom:1px solid var(--sep);
+    padding:10px 12px;
+    gap:10px;
+  }
+
+  .db-logo { margin-bottom:0; }
+  .db-sidebar-user,
+  .db-nav-section { display:none; }
+
+  .db-nav {
+    flex:none;
+    flex-direction:row;
+    gap:6px;
+    overflow-x:auto;
+    overflow-y:hidden;
+    padding-bottom:2px;
+  }
+
+  .db-nav-item,
+  .db-logout-btn {
+    min-width:max-content;
+    padding:9px 12px;
+    border-radius:10px;
+  }
+
+  .db-nav-item:hover { transform:none; }
+  .db-nav-label { max-width:none; }
+
+  .db-sidebar-footer {
+    margin-top:0;
+    padding-top:0;
+    border-top:none;
+    flex-direction:row;
+    justify-content:flex-end;
+  }
+
+  .db-topbar { padding:12px 14px 10px; }
+  .db-main-avatar { width:32px; height:32px; font-size:11px; }
+  .db-page-title { font-size:clamp(22px,5vw,32px); }
+  .db-page-subtitle { max-width:none; }
+  .db-col-l { padding-bottom:84px; }
+
+  .db-inicio-split,
+  .db-modules-grid,
+  .db-negocios-split,
+  .db-sectores-grid,
+  .db-tarifas-grid,
+  .db-market-legend,
+  .db-mini-stats-grid {
+    grid-template-columns:1fr 1fr;
+  }
+
+  .db-comunas-grid { grid-template-columns:repeat(3, minmax(0, 1fr)); }
+}
+
+@media(max-width:700px){
+  .db-col-l { padding:8px 12px 84px; }
+  .db-breadcrumbs { font-size:12px; gap:6px; }
+  .db-filter-bar { gap:6px; }
+
+  .db-sector-share-name { -webkit-line-clamp:2; }
+  .db-market-dist-card { padding:12px 12px !important; }
+
+  .db-stat-row--4,
+  .db-insights-stats--4,
+  .db-comunas-grid { grid-template-columns:1fr 1fr; }
+
+  .db-inicio-split,
+  .db-modules-grid,
+  .db-negocios-split,
+  .db-sectores-grid,
+  .db-tarifas-grid,
+  .db-market-legend,
+  .db-mini-stats-grid {
+    grid-template-columns:1fr;
+  }
+}
+
+@media(max-width:480px){
+  .db-sidebar { padding:8px 8px; }
+  .db-nav-item,
+  .db-logout-btn { padding:8px 10px; font-size:12.5px; }
+
+  .db-topbar { padding:10px 10px 8px; }
+  .db-topbar-right { gap:8px; }
+  .db-main-avatar { display:none; }
+
+  .db-filter-bar {
+    flex-wrap:wrap;
+    overflow-x:visible;
+    padding-bottom:0;
+  }
+
+  .db-filter-bar .db-btn-primary {
+    width:100%;
+    margin-left:0;
+  }
+
+  .db-sector-share-card,
+  .db-market-context-card { padding:12px 12px; }
+  .db-market-dist-card { padding:12px 12px !important; }
+
+  .db-sector-share-item { gap:6px; }
+  .db-sector-share-name,
+  .db-market-context-desc { font-size:11px; }
+  .db-market-context-title { font-size:11.5px; }
+
+  .db-stat-row--4,
+  .db-insights-stats--4,
+  .db-stat-row,
+  .db-insights-stats,
+  .db-comunas-grid { grid-template-columns:1fr; }
 }
 .db-nav-item:focus-visible {
   background: var(--active-bg);
   color: var(--text-h);
   border-color: var(--active-bd);
+}
+
+/* ════════════════════════════════
+   CHAT TOGGLE BUTTON
+════════════════════════════════ */
+.db-chat-toggle {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 200, 150, 0.3);
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.db-chat-toggle:hover {
+  background: rgba(0, 200, 150, 0.15);
+  border-color: var(--accent);
+  transform: scale(1.05);
+}
+
+.db-chat-toggle:active {
+  transform: scale(0.98);
+}
+
+.db-chat-toggle.active {
+  background: rgba(0, 200, 150, 0.1);
+  border-color: var(--accent);
+}
+
+.db-chat-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
