@@ -1,4 +1,4 @@
-"""Servicio mock para simular consumo de modelos LLM sin proveedor real."""
+"""Servicio de análisis y recomendaciones con modelos LLM."""
 
 from typing import Dict, Any, List, Optional
 import time

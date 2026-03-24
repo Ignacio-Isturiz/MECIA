@@ -40,38 +40,60 @@ export default function AccessibilityVoiceGuide() {
   const urlRef = useRef("");
   const cacheRef = useRef(new Map());
   const focusTimerRef = useRef(null);
+  const enabledRef = useRef(enabled);
+  const speakSeqRef = useRef(0);
+  const abortControllerRef = useRef(null);
 
   const cleanupAudio = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
     if (audioRef.current) {
       audioRef.current.pause();
+      audioRef.current.currentTime = 0;
       audioRef.current = null;
     }
-    if (urlRef.current) {
-      URL.revokeObjectURL(urlRef.current);
-      urlRef.current = "";
-    }
+    urlRef.current = "";
   };
 
   const speak = async (message) => {
     const text = `${message || ""}`.trim();
-    if (!enabled || !text) return;
+    if (!enabledRef.current || !text) return;
 
     const now = Date.now();
     if (text === lastTextRef.current && now - lastAtRef.current < COOLDOWN_MS) return;
+
+    // Identificador de solicitud para descartar respuestas tardias.
+    const mySeq = ++speakSeqRef.current;
 
     lastTextRef.current = text;
     lastAtRef.current = now;
     setStatus(`Leyendo: ${text}`);
 
     try {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      abortControllerRef.current = new AbortController();
+
       const cacheKey = `${voice}:${language}:${text}`;
       let objectUrl = cacheRef.current.get(cacheKey);
 
       if (!objectUrl) {
-        const blob = await llmService.textToSpeech({ text, voice, language });
+        const blob = await llmService.textToSpeech({
+          text,
+          voice,
+          language,
+          signal: abortControllerRef.current.signal,
+        });
+
+        if (!enabledRef.current || mySeq !== speakSeqRef.current) return;
         objectUrl = URL.createObjectURL(blob);
         cacheRef.current.set(cacheKey, objectUrl);
       }
+
+      if (!enabledRef.current || mySeq !== speakSeqRef.current) return;
 
       cleanupAudio();
       urlRef.current = objectUrl;
@@ -79,12 +101,38 @@ export default function AccessibilityVoiceGuide() {
       audioRef.current = audio;
       await audio.play();
     } catch (error) {
+      if (error?.name === "AbortError") return;
+
+      // Fallback local del navegador para mejorar tiempos de respuesta.
+      try {
+        if (enabledRef.current && "speechSynthesis" in window) {
+          window.speechSynthesis.cancel();
+          const utterance = new SpeechSynthesisUtterance(text);
+          utterance.lang = language;
+          window.speechSynthesis.speak(utterance);
+          setStatus(`Leyendo (local): ${text}`);
+          return;
+        }
+      } catch (_) {
+        // Ignorar fallback errors
+      }
+
       setStatus("Guia de voz disponible, pero TTS no responde");
     }
   };
 
   useEffect(() => {
+    enabledRef.current = enabled;
     localStorage.setItem(STORAGE_KEY, enabled ? "true" : "false");
+
+    if (!enabled) {
+      speakSeqRef.current += 1;
+      clearTimeout(focusTimerRef.current);
+      if ("speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+      }
+      cleanupAudio();
+    }
   }, [enabled]);
 
   useEffect(() => {
@@ -99,6 +147,7 @@ export default function AccessibilityVoiceGuide() {
     const onFocusIn = (event) => {
       clearTimeout(focusTimerRef.current);
       focusTimerRef.current = setTimeout(() => {
+        if (!enabledRef.current) return;
         const label = getElementLabel(event.target);
         if (label) void speak(label);
       }, 120);
@@ -114,6 +163,9 @@ export default function AccessibilityVoiceGuide() {
   useEffect(() => {
     return () => {
       cleanupAudio();
+      if ("speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+      }
       cacheRef.current.forEach((url) => URL.revokeObjectURL(url));
       cacheRef.current.clear();
     };
