@@ -1,5 +1,3 @@
-import React from 'react';
-
 export default function Features() {
   return (
     <section id="features" className="sec-trans sp">
@@ -8,9 +6,6 @@ export default function Features() {
           <div className="eye">Características del Proyecto</div>
           <h2 className="d3" style={{marginTop:'12px'}}>Todo lo que necesitas para<br/>entender tu ciudad</h2>
           <p className="body-md" style={{marginTop:'14px'}}>Seguridad y servicios públicos al alcance de todos.</p>
-        </div>
-        
-        <div className="slot map-slot" id="slot1" style={{marginBottom:'44px',minHeight:'320px',backgroundColor:'transparent',border:'1px solid rgba(255,255,255,0.2)'}}>
         </div>
 
         <div className="feat-grid">

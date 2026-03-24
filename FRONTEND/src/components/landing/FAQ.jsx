@@ -18,13 +18,34 @@ const SplineLoader = () => (
 );
 
 const FAQ_ITEMS = [
-  {q:'¿MECIA es gratuito?', a:'Sí. MECIA tiene un plan gratuito completo con acceso al dashboard ciudadano, Chatbot Guardián, alertas de seguridad, movilidad y servicios. Los planes Pro incluyen historial extendido, API ilimitada y reportes automáticos.'},
-  {q:'¿De dónde vienen los datos de seguridad?', a:'Los datos provienen de la Secretaría de Seguridad de Medellín, el Centro de Mando y Control (CCTV), SISC y el Sistema 123. Los datos se procesan y anonimizan antes de mostrarse.'},
-  {q:'¿Cómo funciona la integración con EPM?', a:'MECIA se conecta con la API pública de EPM. Con tu número de cuenta consultas tu saldo, historial de consumo y recibes alertas de cortes programados. No almacenamos tus credenciales.'},
-  {q:'¿Con qué frecuencia se actualiza el Metro?', a:'Los datos del Metro de Medellín y Metroplús se actualizan cada 2 minutos durante las horas de operación. Las alertas de incidentes se procesan en tiempo real.'},
-  {q:'¿Tiene MECIA datos del SIATA?', a:'Sí. MECIA tiene integración oficial con el SIATA. Las alertas de lluvia intensa, deslizamientos y riesgo hídrico aparecen con latencia menor a 3 minutos.'},
-  {q:'¿Puedo usar MECIA fuera de Medellín?', a:'MECIA cubre los 10 municipios del Área Metropolitana del Valle de Aburrá. La expansión a otras ciudades colombianas está en la hoja de ruta para el segundo semestre de 2025.'},
-  {q:'¿Hay API para desarrolladores?', a:'Sí. API REST documentada con 1.000 requests/mes gratis. Los planes Pro ofrecen desde 100k hasta ilimitadas, con acceso a endpoints de análisis avanzado y datos históricos desde 2018.'},
+  {
+    q: '¿Qué hace esta plataforma?',
+    a: 'Es una herramienta que ayuda a tomar decisiones usando datos de Medellín, tanto para emprender como para mejorar la vida en la ciudad.'
+  },
+  {
+    q: '¿Qué tipo de datos utiliza?',
+    a: 'Utiliza datos de seguridad, servicios públicos y actividad económica para analizar qué tan viable es una zona y qué decisiones se pueden tomar en ella.'
+  },
+  {
+    q: '¿Cómo ayuda a emprendedores?',
+    a: 'Permite identificar en qué zonas es mejor abrir o mejorar un negocio, recomendando tipos de negocio según las condiciones del entorno.'
+  },
+  {
+    q: '¿Cómo ayuda a ciudadanos?',
+    a: 'Sugiere decisiones como a dónde ir o qué hacer, teniendo en cuenta factores como seguridad y condiciones del entorno.'
+  },
+  {
+    q: '¿Qué hace diferente esta solución?',
+    a: 'No solo muestra datos, los interpreta y los convierte en recomendaciones claras para personas que no saben analizarlos.'
+  },
+  {
+    q: '¿Se pueden encontrar oportunidades nuevas?',
+    a: 'Sí. El sistema identifica zonas donde hay actividad pero falta cierto tipo de negocio, mostrando oportunidades que no son evidentes.'
+  },
+  {
+    q: '¿Es viable en la vida real?',
+    a: 'Sí. Funciona con datos abiertos y puede implementarse como una herramienta accesible para apoyar decisiones reales en la ciudad.'
+  },
 ];
 
 export default function FAQ() {
@@ -37,7 +58,7 @@ export default function FAQ() {
         setInView(true);
         observer.disconnect();
       }
-    }, { rootMargin: '500px' }); // Load 500px before reaching it
+    }, { rootMargin: '500px' });
 
     if (sectionRef.current) observer.observe(sectionRef.current);
     return () => observer.disconnect();

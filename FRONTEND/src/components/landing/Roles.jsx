@@ -10,6 +10,17 @@ export default function Roles() {
           <h2 className="d3" style={{marginTop:'12px'}}>Elige tu camino en la ciudad</h2>
         </div>
 
+        {/* ── Mapa de Medellín ── */}
+        <div className="roles-map-wrap">
+          <div className="roles-map-badge">Medellín · Valle de Aburrá</div>
+          <iframe
+            title="Mapa de Medellín"
+            src="https://www.openstreetmap.org/export/embed.html?bbox=-75.6530%2C6.1500%2C-75.5400%2C6.2950&layer=mapnik&marker=6.2442%2C-75.5812"
+            className="roles-map-frame"
+            loading="lazy"
+          />
+        </div>
+
         <div className="roles-grid">
           <div className="role-card">
             <div className="role-header">
@@ -27,7 +38,7 @@ export default function Roles() {
               <ul className="role-list">
                 <li>Mapa de seguridad en directo</li>
                 <li>Sugerencias para tus planes</li>
-                <li>Novedades de medellín</li>
+                <li>Novedades de Medellín</li>
                 <li>Tu factura EPM</li>
                 <li>Chatbot Guardián 24/7</li>
               </ul>
