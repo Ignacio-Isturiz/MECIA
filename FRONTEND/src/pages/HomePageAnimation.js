@@ -305,6 +305,7 @@ export function initLandingPageAnimation(container) {
     ['.feat-card', '.feat-grid', .08],
     ['.caso', '.casos-grid', .1],
     ['.svc', '.svc-grid', .07],
+    ['.role-card', '.roles-grid', .12],
     ['.ins', '.ins-grid', .1],
     ['.blog-h', '.blog-main', .12],
     ['.faq-it', '.faq-list', .07],

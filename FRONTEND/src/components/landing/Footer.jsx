@@ -25,11 +25,6 @@ export default function Footer() {
           <div className="fcol"><h4>Accesos</h4><ul><li><a href="#">Explorar Datos</a></li><li><a href="#">API Developer</a></li><li><a href="#">Telegram</a></li><li><a href="#">Reportar Error</a></li><li><a href="#">Ayuda</a></li></ul></div>
           <div className="fcol"><h4>Legal</h4><ul><li><a href="#">Términos de Uso</a></li><li><a href="#">Privacidad</a></li><li><a href="#">Cookies</a></li><li><a href="#">Licencias</a></li><li><a href="#">Datos Abiertos</a></li></ul></div>
         </div>
-        <div style={{display:'flex',justifyContent:'center',margin:'-4px 0 26px'}}>
-          <a href="#features" className="btn btn-g" style={{padding:'11px 22px',fontSize:'13.5px'}}>
-            Ruta rapida: como funciona MECIA
-          </a>
-        </div>
         <div className="fbot">
           <span className="f-copy">© 2026 MECIA · UNAULA · unabot@unaula.edu.co · ig. @unabot · www.mecia.com</span>
           <div className="fbot-r">

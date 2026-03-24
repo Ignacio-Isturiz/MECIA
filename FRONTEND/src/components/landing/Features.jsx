@@ -10,19 +10,7 @@ export default function Features() {
           <p className="body-md" style={{marginTop:'14px'}}>Seguridad y servicios públicos al alcance de todos.</p>
         </div>
         
-        <div className="slot map-slot" id="slot1" style={{marginBottom:'44px',minHeight:'320px'}}>
-          <div className="slot-badge">🗺️ MAPA DE MEDELLÍN</div>
-          <div className="slot-map-wrap">
-            <iframe
-              title="Mapa de Medellín"
-              className="slot-map-frame"
-              loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
-              src="https://www.openstreetmap.org/export/embed.html?bbox=-75.63%2C6.20%2C-75.52%2C6.30&layer=mapnik&marker=6.2442%2C-75.5812"
-            />
-          </div>
-          <div className="slot-lbl">Medellín, Antioquia</div>
-          <div className="slot-sub">Vista general del territorio urbano</div>
+        <div className="slot map-slot" id="slot1" style={{marginBottom:'44px',minHeight:'320px',backgroundColor:'transparent',border:'1px solid rgba(255,255,255,0.2)'}}>
         </div>
 
         <div className="feat-grid">

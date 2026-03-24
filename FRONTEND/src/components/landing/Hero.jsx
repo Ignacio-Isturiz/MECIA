@@ -119,8 +119,8 @@ export default function Hero() {
       {/* ══ CURVED DIVIDER ══ */}
       <div className="curve-divider">
         <svg viewBox="0 0 1440 110" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style={{height:'110px'}}>
-          <path d="M0,0 C200,100 500,110 720,110 C940,110 1240,100 1440,0 L1440,110 L0,110 Z" fill="rgba(8,14,28,0.65)"/>
-          <path d="M0,0 C200,100 500,110 720,110 C940,110 1240,100 1440,0" fill="none" stroke="rgba(0,200,150,0.2)" strokeWidth="1"/>
+          <path className="curve-fill" d="M0,0 C200,100 500,110 720,110 C940,110 1240,100 1440,0 L1440,110 L0,110 Z"/>
+          <path className="curve-line" d="M0,0 C200,100 500,110 720,110 C940,110 1240,100 1440,0" fill="none" strokeWidth="1"/>
         </svg>
         <div className="curve-circle" id="curve-scroll">
           <svg viewBox="0 0 24 24" fill="none" stroke="var(--g)" strokeWidth="2.5">

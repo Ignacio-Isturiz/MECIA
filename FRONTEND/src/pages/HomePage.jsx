@@ -7,6 +7,7 @@ import Hero from '@/components/landing/Hero';
 import { TrustedLogos, StatsStrip } from '@/components/landing/TrustedStats';
 import Features from '@/components/landing/Features';
 import FAQ from '@/components/landing/FAQ';
+import Roles from '@/components/landing/Roles';
 import Footer from '@/components/landing/Footer';
 
 export default function HomePage() {
@@ -66,6 +67,7 @@ export default function HomePage() {
       <StatsStrip />
       <Features />
       <FAQ />
+      <Roles />
       <Footer />
     </div>
   );
