@@ -2,6 +2,26 @@ import React, { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { initLandingPageAnimation } from './HomePageAnimation';
 
+function useNavScroll() {
+  useEffect(() => {
+    let lastY = window.scrollY;
+    const nav = document.getElementById('nav');
+    const onScroll = () => {
+      const y = window.scrollY;
+      if (y < 60) {
+        nav?.classList.remove('nav--hidden');
+      } else if (y > lastY) {
+        nav?.classList.add('nav--hidden');
+      } else {
+        nav?.classList.remove('nav--hidden');
+      }
+      lastY = y;
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+}
+
 // Landing Components
 import Hero from '@/components/landing/Hero';
 import { TrustedLogos, StatsStrip } from '@/components/landing/TrustedStats';
@@ -11,6 +31,7 @@ import Roles from '@/components/landing/Roles';
 import Footer from '@/components/landing/Footer';
 
 export default function HomePage() {
+  useNavScroll();
   const containerRef = useRef(null);
 
   useEffect(() => {
@@ -41,8 +62,9 @@ export default function HomePage() {
         </Link>
         <nav className="nav-links">
           <a href="#" className="active">Inicio</a>
-          <a href="#features">Plataforma</a>
-          <a href="#faq">Hecho para ti</a>
+          <a href="#features">Características</a>
+          <a href="#faq">Preguntas</a>
+          <a href="#roles">Explorar</a>
         </nav>
         <div className="nav-r">
           <button className="theme-btn" id="theme-btn">
@@ -66,8 +88,8 @@ export default function HomePage() {
       <TrustedLogos />
       <StatsStrip />
       <Features />
-      <FAQ />
       <Roles />
+      <FAQ />
       <Footer />
     </div>
   );
