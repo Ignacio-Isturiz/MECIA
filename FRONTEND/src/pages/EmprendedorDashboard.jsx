@@ -272,7 +272,7 @@ function InsightsWidget() {
 
       {/* Stats */}
       {summary && (
-        <div className="db-insights-stats" style={{gridTemplateColumns:'repeat(4,1fr)',flexShrink:0}}>
+        <div className="db-insights-stats db-insights-stats--4" style={{flexShrink:0}}>
           {[
             {label:'Empresas',      value:`${(summary.total_empresas/1000).toFixed(1)}k`, tooltip:'Total de empresas registradas formalmente en Medellín'},
             {label:'Sectores',      value:summary.total_actividades, tooltip:'Sectores económicos activos (CIIU-DANE)'},
@@ -413,7 +413,7 @@ function NegociosWidget() {
 
       {/* Stats */}
       {summary && (
-        <div className="db-insights-stats" style={{gridTemplateColumns:'repeat(4,1fr)',flexShrink:0}}>
+        <div className="db-insights-stats db-insights-stats--4" style={{flexShrink:0}}>
           {[
             {label:'Registros', value:(summary.total_registros||0).toLocaleString('es-CO'), tooltip:'Establecimientos registrados con los filtros actuales'},
             {label:'Unidades',  value:(summary.total_cantidad||0).toLocaleString('es-CO'),  tooltip:'Total de unidades de negocio contadas'},
@@ -429,7 +429,7 @@ function NegociosWidget() {
       )}
 
       {/* Barras — flex:1 para llenar el espacio */}
-      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,flex:1,minHeight:0}}>
+      <div className="db-negocios-split" style={{flex:1,minHeight:0}}>
         <div style={{display:'flex',flexDirection:'column'}}>
           <div style={{fontSize:11,fontWeight:700,letterSpacing:'.07em',textTransform:'uppercase',color:'var(--text-dim)',marginBottom:8,flexShrink:0}}>
             Top Barrios
@@ -617,6 +617,7 @@ export default function EmprendedorDashboard() {
   const [loading, setLoading] = useState(true);
   const [mod, setMod]       = useState('inicio');
   const [convId, setConvId] = useState(null);
+  const [showConvList, setShowConvList] = useState(true);
 
   // Datos para inicio
   const [summary, setSummary]             = useState(null);
@@ -685,46 +686,46 @@ export default function EmprendedorDashboard() {
           const total = topActividades.reduce((s,i)=>s+(i.total_empresas||0),0);
           const colors = ['#00C896','#239677','#60a5fa','#f59e0b','#c084fc'];
           return (
-            <div className="db-rc" style={{flexShrink:0}}>
+            <div className="db-rc db-sector-share-card" style={{flexShrink:0}}>
               <div className="db-card-header" style={{marginBottom:10}}>
                 <span className="db-card-title">Participación sectorial</span>
               </div>
               {/* Mini donut bar */}
-              <div style={{height:8,borderRadius:4,display:'flex',overflow:'hidden',gap:1,marginBottom:12}}>
+              <div className="db-sector-share-bar">
                 {topActividades.slice(0,5).map((item,i)=>{
                   const pct = total > 0 ? ((item.total_empresas||0)/total*100) : 0;
                   return <div key={i} style={{width:`${pct}%`,background:colors[i]}}/>;
                 })}
-                <div style={{flex:1,background:'rgba(255,255,255,.07)'}}/>
+                <div className="db-sector-share-rest"/>
               </div>
               {topActividades.slice(0,5).map((item,i)=>{
                 const pct = total > 0 ? ((item.total_empresas||0)/total*100) : 0;
                 return (
-                  <div key={i} style={{display:'flex',alignItems:'center',gap:8,marginBottom:7}} data-tooltip={`${(item.total_empresas||0).toLocaleString('es-CO')} empresas en este sector`}>
-                    <div style={{width:8,height:8,borderRadius:2,background:colors[i],flexShrink:0}}/>
-                    <div style={{flex:1,fontSize:11.5,color:'var(--text-mid)',lineHeight:1.3,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{item.descripcion}</div>
-                    <div style={{fontSize:11.5,fontWeight:700,color:'var(--text-h)',flexShrink:0}}>{pct.toFixed(1)}%</div>
+                  <div key={i} className="db-sector-share-item" data-tooltip={`${(item.total_empresas||0).toLocaleString('es-CO')} empresas en este sector`}>
+                    <div className="db-sector-share-dot" style={{background:colors[i]}}/>
+                    <div className="db-sector-share-name">{item.descripcion}</div>
+                    <div className="db-sector-share-pct">{pct.toFixed(1)}%</div>
                   </div>
                 );
               })}
             </div>
           );
         })()}
-        <div className="db-rc" style={{flex:1,display:'flex',flexDirection:'column',minHeight:0}}>
+        <div className="db-rc db-market-context-card" style={{flex:1,display:'flex',flexDirection:'column',minHeight:0}}>
           <div className="db-card-header" style={{marginBottom:8,flexShrink:0}}>
             <span className="db-card-title">Contexto del mercado</span>
           </div>
-          <div style={{display:'flex',flexDirection:'column',gap:0,flex:1}}>
+          <div className="db-market-context-list">
             {[
               {icon:'🏙️', label:'Medellín formal', desc:`${summary ? `${(summary.total_empresas/1000).toFixed(1)}k` : '—'} empresas registradas en el DANE — ciudad con alta formalización empresarial.`},
               {icon:'📈', label:'Dinamismo sectorial', desc:`${summary ? summary.total_actividades : '—'} sectores económicos activos. Los servicios y el comercio dominan el mapa.`},
               {icon:'🗺️', label:'Distribución comunal', desc:`${summary?.comuna_top?.nombre || 'El Centro'} lidera en concentración. Las zonas periféricas tienen menor competencia.`},
             ].map((item,i)=>(
-              <div key={i} style={{display:'flex',gap:9,alignItems:'flex-start',flex:1,padding:'6px 0',borderBottom:i<2?'1px solid var(--sep)':'none'}}>
-                <span style={{fontSize:16,flexShrink:0,marginTop:2}}>{item.icon}</span>
+              <div key={i} className="db-market-context-item" style={{borderBottom:i<2?'1px solid var(--sep)':'none'}}>
+                <span className="db-market-context-icon">{item.icon}</span>
                 <div>
-                  <div style={{fontSize:12,fontWeight:700,color:'var(--text-h)',marginBottom:2}}>{item.label}</div>
-                  <div style={{fontSize:11.5,color:'var(--text-mid)',lineHeight:1.45}}>{item.desc}</div>
+                  <div className="db-market-context-title">{item.label}</div>
+                  <div className="db-market-context-desc">{item.desc}</div>
                 </div>
               </div>
             ))}
@@ -874,7 +875,7 @@ export default function EmprendedorDashboard() {
     <>
       {/* Stats principales */}
       {summary && (
-        <div className="db-stat-row" style={{gridTemplateColumns:'repeat(4,1fr)',flexShrink:0}}>
+        <div className="db-stat-row db-stat-row--4" style={{flexShrink:0}}>
           {[
             {label:'Empresas registradas', value:`${(summary.total_empresas/1000).toFixed(1)}k`, tooltip:'Total de empresas formalmente registradas en Medellín'},
             {label:'Sectores activos',     value:summary.total_actividades, tooltip:'Tipos de actividades económicas únicas presentes en la ciudad'},
@@ -894,7 +895,7 @@ export default function EmprendedorDashboard() {
         <div style={{fontSize:11,fontWeight:700,letterSpacing:'.07em',textTransform:'uppercase',color:'var(--text-dim)',marginBottom:10}}>
           Sectores económicos · Posición de mercado
         </div>
-        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+        <div className="db-sectores-grid">
           {topActividades.length === 0 ? (
             <div style={{fontSize:12,color:'var(--text-dim)',gridColumn:'1/-1'}}>Cargando sectores...</div>
           ) : topActividades.map((item,i)=>{
@@ -922,7 +923,7 @@ export default function EmprendedorDashboard() {
           <div style={{fontSize:11,fontWeight:700,letterSpacing:'.07em',textTransform:'uppercase',color:'var(--text-dim)',marginBottom:12}}>
             Ranking de comunas por actividad empresarial
           </div>
-          <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:8}}>
+          <div className="db-comunas-grid">
             {topComunas.map((item,i)=>{
               const intensity = Math.max(0.12, 0.5 - i * 0.08);
               return (
@@ -945,7 +946,7 @@ export default function EmprendedorDashboard() {
 
       {/* Distribución del mercado */}
       {topActividades.length > 0 && (
-        <div className="db-card" style={{flex:1,padding:'14px 18px',minHeight:0,display:'flex',flexDirection:'column',justifyContent:'center',gap:10}}>
+        <div className="db-card db-market-dist-card" style={{padding:'14px 18px',display:'flex',flexDirection:'column',gap:10}}>
           <div style={{fontSize:11,fontWeight:700,letterSpacing:'.07em',textTransform:'uppercase',color:'var(--text-dim)'}}>
             Distribución del mercado por sector
           </div>
@@ -959,7 +960,7 @@ export default function EmprendedorDashboard() {
             <div style={{flex:1,background:'rgba(255,255,255,.07)'}}/>
           </div>
           {/* Legend */}
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'4px 14px'}}>
+          <div className="db-market-legend">
             {topActividades.slice(0,4).map((item,i)=>{
               const pct = totalEmpresas > 0 ? ((item.total_empresas||0)/totalEmpresas*100) : 0;
               const colors = ['#00C896','#239677','#60a5fa','#f59e0b'];
@@ -986,18 +987,119 @@ export default function EmprendedorDashboard() {
   // ── EMPRENDEDOR: chat + historial, full-width ──
   const emprendedorLeft = (
     <div className="db-card" style={{flex:1,display:'flex',overflow:'hidden',padding:0}}>
-      <ConvList
-        refreshKey={convListKey}
-        currentId={convId}
-        onSelect={setConvId}
-        onNew={() => setConvId(null)}
-        onDelete={id => { if(convId===id) setConvId(null); }}
-      />
-      <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden',borderLeft:'1px solid var(--sep)'}}>
-        <div style={{padding:'14px 18px',borderBottom:'1px solid var(--sep)',flexShrink:0}}>
-          <div className="db-card-title">Consultor de Negocios IA</div>
-          <div className="db-card-subtitle">Análisis de viabilidad · Recomendaciones de zona · Costos EPM</div>
+      {/* Sidebar: Lista de conversaciones (Estilo Gemini) */}
+      <div style={{
+        display:'flex',
+        flexDirection:'column',
+        overflow:'hidden',
+        width:showConvList ? '260px' : '0px',
+        opacity:showConvList ? 1 : 0,
+        background:'var(--card-bg)',
+        borderRight:showConvList ? '1px solid var(--border-color)' : 'none',
+        transition:'width 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease',
+        flexShrink:0,
+        whiteSpace:'nowrap',
+      }}>
+        {/* Sidebar Header */}
+        <div style={{padding:'10px 12px',borderBottom:'1px solid var(--border-color)',flexShrink:0}}>
+          <button
+            onClick={() => setShowConvList(false)}
+            style={{
+              width:'100%',
+              padding:'7px 10px',
+              borderRadius:'6px',
+              border:'1px solid var(--border-color)',
+              background:'var(--active-bg)',
+              color:'var(--text-h)',
+              cursor:'pointer',
+              fontSize:'11px',
+              fontWeight:'700',
+              transition:'all 0.2s ease',
+              display:'flex',
+              alignItems:'center',
+              justifyContent:'center',
+              gap:'4px',
+              letterSpacing:'.02em',
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.background = 'var(--hover-bg)';
+              e.target.style.transform = 'translateX(-2px)';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.background = 'var(--active-bg)';
+              e.target.style.transform = 'translateX(0)';
+            }}
+          >
+            ← Ocultar
+          </button>
         </div>
+
+        {/* Sidebar Content */}
+        <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
+          <ConvList
+            refreshKey={convListKey}
+            currentId={convId}
+            onSelect={setConvId}
+            onNew={() => setConvId(null)}
+            onDelete={id => { if(convId===id) setConvId(null); }}
+          />
+        </div>
+      </div>
+
+      {/* Main Chat Area */}
+      <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden',background:'var(--card-bg)'}}>
+        {/* Header con toggle */}
+        <div style={{
+          padding:'14px 18px',
+          borderBottom:'1px solid var(--sep)',
+          flexShrink:0,
+          display:'flex',
+          justifyContent:'space-between',
+          alignItems:'center',
+          background:'var(--card-bg)',
+        }}>
+          <div style={{display:'flex',alignItems:'center',gap:12,flex:1}}>
+            {!showConvList && (
+              <button
+                onClick={() => setShowConvList(true)}
+                title='Mostrar lista de chats'
+                style={{
+                  padding:'6px 10px',
+                  borderRadius:'6px',
+                  border:'1px solid var(--border-color)',
+                  background:'var(--active-bg)',
+                  color:'var(--text-h)',
+                  cursor:'pointer',
+                  fontSize:'18px',
+                  fontWeight:'600',
+                  transition:'all 0.2s ease',
+                  display:'flex',
+                  alignItems:'center',
+                  justifyContent:'center',
+                  minWidth:'40px',
+                  minHeight:'40px',
+                  flexShrink:0,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'var(--hover-bg)';
+                  e.currentTarget.style.transform = 'scale(1.08)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'var(--active-bg)';
+                  e.currentTarget.style.transform = 'scale(1)';
+                }}
+              >
+                ☰
+              </button>
+            )}
+            <div style={{minWidth:0,flex:1}}>
+              <div className="db-card-title" style={{fontSize:'14px',fontWeight:'700',color:'var(--text-h)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>Consultor de Negocios IA</div>
+              <div className="db-card-subtitle" style={{fontSize:'12px',color:'var(--text-dim)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>Análisis de viabilidad · Datos reales</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Chat Container */}
         <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
           <ChatEmprendedor conversationId={convId} onConversationChange={handleConversationChange}/>
         </div>

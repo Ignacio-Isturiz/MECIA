@@ -189,7 +189,7 @@ function CriminalidadWidget() {
   return (
     <div style={{display:'flex',flexDirection:'column',gap:14}}>
       {summary && (
-        <div className="db-stat-row" style={{gridTemplateColumns:'repeat(4,1fr)'}}>
+        <div className="db-stat-row db-stat-row--4">
           {[
             {label:'Comunas', value:summary.total_comunas},
             {label:'Casos totales', value:`${(summary.total_casos/1000).toFixed(1)}k`, cls:'red'},
@@ -363,6 +363,7 @@ export default function CiudadanoDashboard() {
   const [loading, setLoading] = useState(true);
   const [mod, setMod]         = useState('inicio');
   const [segTab, setSegTab]   = useState('chatbot');
+  const [showChat, setShowChat] = useState(true);
 
   // Datos para página de inicio
   const [crimiSummary, setCrimiSummary] = useState(null);
@@ -419,7 +420,7 @@ export default function CiudadanoDashboard() {
       <div className="db-card-header" style={{marginBottom:10}}>
         <span className="db-card-title">Seguridad · Resumen</span>
       </div>
-      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+      <div className="db-mini-stats-grid">
         {[
           {label:'Comunas',       value:crimiSummary.total_comunas, tooltip:'Total de comunas con datos de criminalidad disponibles'},
           {label:'Casos totales', value:`${(crimiSummary.total_casos/1000).toFixed(0)}k`, cls:'red', tooltip:'Total de casos reportados en todas las comunas'},
@@ -487,7 +488,7 @@ export default function CiudadanoDashboard() {
           <div className="db-card-header" style={{marginBottom:10,flexShrink:0}}>
             <span className="db-card-title">Tarifas EPM · Referencia</span>
           </div>
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8,flex:1,minHeight:0}}>
+          <div className="db-tarifas-grid" style={{flex:1,minHeight:0}}>
             {[
               {servicio:'Energía', icon:'⚡', color:'#d97706', estratos:[
                 {e:'E1–2', rango:'$45k–$90k'},
@@ -569,7 +570,7 @@ export default function CiudadanoDashboard() {
     <>
       {/* Stats de criminalidad */}
       {crimiSummary && (
-        <div className="db-stat-row" style={{gridTemplateColumns:'repeat(4,1fr)',flexShrink:0}}>
+        <div className="db-stat-row db-stat-row--4" style={{flexShrink:0}}>
           {[
             {label:'Comunas con datos',  value:crimiSummary.total_comunas, tooltip:'Número de comunas de Medellín con datos de criminalidad disponibles'},
             {label:'Casos registrados',  value:`${(crimiSummary.total_casos/1000).toFixed(1)}k`, cls:'red', tooltip:'Total de casos delictivos registrados en toda la ciudad'},
@@ -593,7 +594,7 @@ export default function CiudadanoDashboard() {
       </div>
 
       {/* Seguridad + Explorar Medellín */}
-      <div style={{display:'grid',gridTemplateColumns:'1.6fr 1fr',gap:14,flex:1,overflow:'hidden',minHeight:0}}>
+      <div className="db-inicio-split" style={{flex:1,overflow:'hidden',minHeight:0}}>
         {/* Guardián preview */}
         <div className="db-card" style={{display:'flex',flexDirection:'column',gap:14,overflow:'hidden'}}>
           <div className="db-card-header" style={{marginBottom:0}}>
@@ -665,7 +666,7 @@ export default function CiudadanoDashboard() {
       </div>
 
       {/* Módulos disponibles */}
-      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,flexShrink:0}}>
+      <div className="db-modules-grid" style={{flexShrink:0}}>
         {[
           { icon:<Icons.Bolt/>, title:'Servicios EPM', desc:'Análisis de facturas con IA. Recomendaciones de ahorro y predicción.', action:()=>setMod('servicios') },
           { icon:<Icons.News/>, title:'Noticias',      desc:'Noticias verificadas de Medellín filtradas por categoría en tiempo real.', action:()=>setMod('noticias') },

@@ -182,15 +182,16 @@ export default function AccessibilityVoiceGuide() {
   }, []);
 
   return (
-    <div style={{ position: "fixed", right: "1.5rem", bottom: "5.5rem", zIndex: 9999, display: "flex", gap: "0.5rem" }}>
+    <div className="voice-guide-fab">
       <button
         type="button"
         onClick={() => setEnabled((prev) => !prev)}
         aria-pressed={enabled}
         aria-label={enabled ? "Desactivar guia de voz" : "Activar guia de voz"}
-        style={{ borderRadius: 8, border: "1px solid #0f766e", background: enabled ? "#0d9488" : "#1f2937", color: "#fff", padding: "0.5rem 0.75rem", fontWeight: 600 }}
+        className={`voice-guide-btn${enabled ? " is-on" : " is-off"}`}
       >
-        {enabled ? "Voz ON" : "Voz OFF"}
+        <span className="voice-guide-icon" aria-hidden="true">🔊</span>
+        <span className="voice-guide-label">{enabled ? "Voz ON" : "Voz OFF"}</span>
       </button>
 
       <span className="sr-only" aria-live="polite">{status}</span>
