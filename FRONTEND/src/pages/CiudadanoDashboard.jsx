@@ -6,7 +6,7 @@ import { llmService } from '@/services/llmService';
 import newsService from '@/services/newsService';
 import { datasetsService } from '@/services/datasetsService';
 
-import DashboardLayout, { Icons, TabBar } from '@/components/dashboard/DashboardLayout';
+import DashboardLayout, { Icons, TabBar, StyledSelect } from '@/components/dashboard/DashboardLayout';
 import MapaLeafletComunas from '@/components/MapaLeafletComunas';
 
 const NAV = [
@@ -140,9 +140,7 @@ function NoticiasWidget({ limit = 5 }) {
           <div className="db-card-title">Noticias</div>
           <div className="db-card-subtitle">Fuentes verificadas · Medellín</div>
         </div>
-        <select className="db-news-select" value={category} onChange={e => setCategory(e.target.value)}>
-          {CAT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-        </select>
+        <StyledSelect value={category} onChange={setCategory} options={CAT_OPTIONS} className="db-sel--news" />
       </div>
       <div style={{ overflowY:'auto', flex:1 }}>
         {loading ? (
@@ -379,8 +377,8 @@ export default function CiudadanoDashboard() {
     datasetsService.getCriminalidadSummary()
       .then(r => { if(r.success) setCrimiSummary(r.data); })
       .catch(() => {});
-    newsService.getMedellinNews(4, 'general')
-      .then(r => setTopNoticias(r?.data || []))
+    newsService.getMedellinNews(6, 'general')
+      .then(r => setTopNoticias(Array.isArray(r) ? r : (r?.data || r?.articles || r?.items || [])))
       .catch(() => {});
   }, []);
 
@@ -399,124 +397,284 @@ export default function CiudadanoDashboard() {
   };
   const m = META[mod];
 
-  /* ══ COL-R: widgets de la derecha (iguales en todos los módulos) ══ */
-  const rightCol = (
-    <>
-      {/* Nota */}
-      <div className="db-rc db-card-note" style={{flexShrink:0}}>
-        <div className="db-card-header">
-          <span className="db-card-title">Ciudad Inteligente</span>
-          <button className="db-edit-btn"><Icons.Pencil/></button>
-        </div>
-        <div className="db-note-body">
-          MECIA integra <b>datos reales</b> de Medellín: seguridad, servicios públicos y noticias en tiempo real.
-        </div>
-        <div className="db-note-footer">
-          <span className="db-note-time">Medellín · Valle de Aburrá</span>
-          <div className="db-note-badge"><span className="ck">✓</span> Conectado</div>
-        </div>
+  /* ══ Bloque Ciudad Inteligente (compartido) ══ */
+  const ciudadInteligente = (
+    <div className="db-rc db-card-note" style={{flexShrink:0}}>
+      <div className="db-card-header">
+        <span className="db-card-title">Ciudad Inteligente</span>
       </div>
+      <div className="db-note-body">
+        MECIA integra <b>datos reales</b> de Medellín: seguridad, servicios públicos y noticias en tiempo real.
+      </div>
+      <div className="db-note-footer">
+        <span className="db-note-time">Medellín · Valle de Aburrá</span>
+        <div className="db-note-badge"><span className="ck">✓</span> Conectado</div>
+      </div>
+    </div>
+  );
 
-      {/* Stats de criminalidad (siempre visibles en col-r) */}
-      {crimiSummary && (
-        <div className="db-rc" style={{flexShrink:0}}>
-          <div className="db-card-header" style={{marginBottom:10}}>
-            <span className="db-card-title">Seguridad · Resumen</span>
+  /* ══ Bloque seguridad resumen (con tooltip) ══ */
+  const seguridadResumen = crimiSummary ? (
+    <div className="db-rc" style={{flexShrink:0}}>
+      <div className="db-card-header" style={{marginBottom:10}}>
+        <span className="db-card-title">Seguridad · Resumen</span>
+      </div>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+        {[
+          {label:'Comunas',       value:crimiSummary.total_comunas, tooltip:'Total de comunas con datos de criminalidad disponibles'},
+          {label:'Casos totales', value:`${(crimiSummary.total_casos/1000).toFixed(0)}k`, cls:'red', tooltip:'Total de casos reportados en todas las comunas'},
+          {label:'Tasa promedio', value:Number(crimiSummary.tasa_promedio).toFixed(1), tooltip:'Casos por cada 100.000 habitantes (promedio ciudad)'},
+          {label:'+ afectada',    value:crimiSummary.comuna_mas_afectada, small:true, tooltip:'Comuna con mayor número de casos reportados'},
+        ].map((s,i)=>(
+          <div key={i} className="db-stat-item" data-tooltip={s.tooltip}>
+            <div className="db-stat-label">{s.label}</div>
+            <div className={`db-stat-value ${s.cls||''}`} style={s.small?{fontSize:12,marginTop:3}:{fontSize:18}}>{s.value}</div>
           </div>
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+        ))}
+      </div>
+    </div>
+  ) : null;
+
+  /* ══ COL-R dinámico por módulo ══ */
+  const rightColByMod = {
+    inicio: (
+      <>
+        {ciudadInteligente}
+        {seguridadResumen}
+        <div className="db-rc" style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
+          <div className="db-card-header" style={{marginBottom:10}}>
+            <span className="db-card-title">Noticias recientes</span>
+          </div>
+          <div style={{overflowY:'auto',flex:1}}>
+            {topNoticias.length === 0 ? (
+              <div style={{fontSize:12,color:'var(--text-dim)'}}>Cargando noticias...</div>
+            ) : topNoticias.map((art,i)=>(
+              <a key={i} href={art.url} target="_blank" rel="noreferrer"
+                style={{display:'block',marginBottom:10,textDecoration:'none',paddingBottom:10,borderBottom:'1px solid var(--sep)'}}
+              >
+                <div style={{fontSize:10,fontWeight:700,letterSpacing:'.04em',textTransform:'uppercase',color:'var(--accent)',marginBottom:3}}>{art.source||'Medellín'}</div>
+                <div style={{fontSize:13,fontWeight:600,color:'var(--text-h)',lineHeight:1.35}}>{art.title}</div>
+              </a>
+            ))}
+          </div>
+        </div>
+      </>
+    ),
+    seguridad: null, // full-width
+    servicios: (
+      <>
+        {ciudadInteligente}
+        <div className="db-rc" style={{flex:1,display:'flex',flexDirection:'column',minHeight:0}}>
+          <div className="db-card-header" style={{marginBottom:10,flexShrink:0}}>
+            <span className="db-card-title">Cómo usar el analizador</span>
+          </div>
+          <div style={{fontSize:13,color:'var(--text-mid)',lineHeight:1.7,display:'flex',flexDirection:'column',gap:10,flex:1}}>
             {[
-              {label:'Comunas',       value:crimiSummary.total_comunas},
-              {label:'Casos totales', value:`${(crimiSummary.total_casos/1000).toFixed(0)}k`, cls:'red'},
-              {label:'Tasa promedio', value:Number(crimiSummary.tasa_promedio).toFixed(1)},
-              {label:'+ afectada',    value:crimiSummary.comuna_mas_afectada, small:true},
-            ].map((s,i)=>(
-              <div key={i} className="db-stat-item">
-                <div className="db-stat-label">{s.label}</div>
-                <div className={`db-stat-value ${s.cls||''}`} style={s.small?{fontSize:12,marginTop:3}:{fontSize:18}}>{s.value}</div>
+              {step:'1', txt:'Toma fotos claras de tu factura EPM'},
+              {step:'2', txt:'Arrastra o sube hasta 6 imágenes (JPG, PNG, WEBP)'},
+              {step:'3', txt:'La IA analiza el consumo y detecta anomalías'},
+              {step:'4', txt:'Recibe recomendaciones de ahorro personalizadas'},
+              {step:'5', txt:'Obtén predicción de tu próxima factura'},
+            ].map(({step,txt})=>(
+              <div key={step} style={{display:'flex',gap:10,alignItems:'flex-start'}}>
+                <div style={{width:22,height:22,borderRadius:6,background:'var(--active-bg)',border:'1px solid var(--active-bd)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:700,color:'var(--accent)',flexShrink:0}}>{step}</div>
+                <span style={{fontSize:12.5,lineHeight:1.5}}>{txt}</span>
               </div>
             ))}
           </div>
         </div>
-      )}
-
-      {/* Noticias recientes en col-r */}
-      <div className="db-rc" style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
-        <div className="db-card-header" style={{marginBottom:10}}>
-          <span className="db-card-title">Noticias recientes</span>
-        </div>
-        <div style={{overflowY:'auto',flex:1}}>
-          {topNoticias.length === 0 ? (
-            <div style={{fontSize:12,color:'var(--text-dim)'}}>Cargando noticias...</div>
-          ) : topNoticias.map((art,i)=>(
-            <a key={i} href={art.url} target="_blank" rel="noreferrer"
-              style={{
-                display:'block', marginBottom:10, textDecoration:'none',
-                paddingBottom:10, borderBottom:'1px solid var(--sep)'
-              }}
-            >
-              <div style={{fontSize:10,fontWeight:700,letterSpacing:'.04em',textTransform:'uppercase',color:'var(--accent)',marginBottom:3}}>
-                {art.source||'Medellín'}
+        <div className="db-rc" style={{flex:1,display:'flex',flexDirection:'column',minHeight:0}}>
+          <div className="db-card-header" style={{marginBottom:10,flexShrink:0}}>
+            <span className="db-card-title">Tarifas EPM · Referencia</span>
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8,flex:1,minHeight:0}}>
+            {[
+              {servicio:'Energía', icon:'⚡', color:'#d97706', estratos:[
+                {e:'E1–2', rango:'$45k–$90k'},
+                {e:'E3–4', rango:'$90k–$140k'},
+                {e:'E5–6', rango:'$140k–$200k'},
+              ]},
+              {servicio:'Acueducto', icon:'💧', color:'#60a5fa', estratos:[
+                {e:'E1–2', rango:'$20k–$40k'},
+                {e:'E3–4', rango:'$40k–$60k'},
+                {e:'E5–6', rango:'$60k–$80k'},
+              ]},
+              {servicio:'Gas', icon:'🔥', color:'#f87171', estratos:[
+                {e:'E1–2', rango:'$15k–$25k'},
+                {e:'E3–4', rango:'$25k–$40k'},
+                {e:'E5–6', rango:'$40k–$60k'},
+              ]},
+            ].map(({servicio,icon,color,estratos})=>(
+              <div key={servicio} style={{display:'flex',flexDirection:'column',gap:5}}>
+                <div style={{display:'flex',alignItems:'center',gap:5,paddingBottom:5,borderBottom:'1px solid var(--sep)'}}>
+                  <span style={{fontSize:13}}>{icon}</span>
+                  <span style={{fontSize:11,fontWeight:700,color:'var(--text-h)'}}>{servicio}</span>
+                </div>
+                {estratos.map(({e,rango})=>(
+                  <div key={e} style={{background:'var(--active-bg)',borderRadius:6,padding:'5px 7px'}}>
+                    <div style={{fontSize:10,color:'var(--text-dim)',marginBottom:2}}>{e}</div>
+                    <div style={{fontSize:11.5,fontWeight:700,color,lineHeight:1.2}}>{rango}</div>
+                  </div>
+                ))}
               </div>
-              <div style={{fontSize:13,fontWeight:600,color:'var(--text-h)',lineHeight:1.35}}>
-                {art.title}
-              </div>
-            </a>
-          ))}
+            ))}
+          </div>
+          <div style={{fontSize:10,color:'var(--text-dim)',borderTop:'1px solid var(--sep)',paddingTop:7,marginTop:8,lineHeight:1.5,flexShrink:0}}>
+            Valores estimados por estrato · sube tu factura para análisis exacto.
+          </div>
         </div>
-      </div>
-    </>
-  );
+      </>
+    ),
+    noticias: (
+      <>
+        {ciudadInteligente}
+        {seguridadResumen}
+        <div className="db-rc" style={{flex:1,display:'flex',flexDirection:'column',minHeight:0}}>
+          <div className="db-card-header" style={{marginBottom:10,flexShrink:0}}>
+            <span className="db-card-title">Categorías disponibles</span>
+          </div>
+          <div style={{display:'flex',flexDirection:'column',gap:7,flex:1}}>
+            {[
+              {v:'general',        label:'General',        color:'#00C896', desc:'Noticias generales de la ciudad'},
+              {v:'seguridad',      label:'Seguridad',      color:'#f87171', desc:'Orden público y convivencia'},
+              {v:'emprendimiento', label:'Emprendimiento', color:'#60a5fa', desc:'Economía, startups y negocios'},
+              {v:'movilidad',      label:'Movilidad',      color:'#a78bfa', desc:'Metro, tranvía y transporte'},
+              {v:'salud',          label:'Salud',          color:'#34d399', desc:'Salud pública y bienestar'},
+              {v:'economia',       label:'Economía',       color:'#d97706', desc:'Indicadores y mercado laboral'},
+            ].map(({v,label,color,desc})=>(
+              <div key={v} style={{
+                flex:1, display:'flex', alignItems:'center', gap:10,
+                padding:'6px 10px', borderRadius:9,
+                background:`${color}10`, border:`1px solid ${color}25`,
+                cursor:'default', minHeight:0,
+              }}>
+                <div style={{width:7,height:7,borderRadius:'50%',background:color,flexShrink:0}}/>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:12.5,fontWeight:700,color,lineHeight:1.1}}>{label}</div>
+                  <div style={{fontSize:10.5,color:'var(--text-dim)',lineHeight:1.2,marginTop:1}}>{desc}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </>
+    ),
+  };
+  const rightCol = rightColByMod[mod];
 
   /* ══ COL-L: contenido principal según módulo ══ */
 
-  // ── INICIO: overview real con datos ──
+  // ── INICIO: overview con datos ──
   const inicioLeft = (
     <>
+      {/* Stats de criminalidad */}
+      {crimiSummary && (
+        <div className="db-stat-row" style={{gridTemplateColumns:'repeat(4,1fr)',flexShrink:0}}>
+          {[
+            {label:'Comunas con datos',  value:crimiSummary.total_comunas, tooltip:'Número de comunas de Medellín con datos de criminalidad disponibles'},
+            {label:'Casos registrados',  value:`${(crimiSummary.total_casos/1000).toFixed(1)}k`, cls:'red', tooltip:'Total de casos delictivos registrados en toda la ciudad'},
+            {label:'Tasa por 100k hab.', value:Number(crimiSummary.tasa_promedio).toFixed(1), tooltip:'Promedio de casos por cada 100.000 habitantes en Medellín'},
+            {label:'Comuna más afectada',value:crimiSummary.comuna_mas_afectada, small:true, tooltip:'La comuna con más casos de criminalidad registrados'},
+          ].map((s,i)=>(
+            <div key={i} className="db-stat-item" data-tooltip={s.tooltip}>
+              <div className="db-stat-label">{s.label}</div>
+              <div className={`db-stat-value ${s.cls||''}`} style={s.small?{fontSize:12,marginTop:3}:{fontSize:20}}>{s.value}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Pills de acceso rápido */}
-      <div className="db-filter-bar">
+      <div className="db-filter-bar" style={{flexShrink:0}}>
         <button type="button" className="db-fpill" onClick={() => setMod('seguridad')}><span className="db-dot"/>Seguridad</button>
         <button type="button" className="db-fpill" onClick={() => setMod('servicios')}>Servicios EPM</button>
         <button type="button" className="db-fpill" onClick={() => setMod('noticias')}>Noticias</button>
-        <div className="db-fset"><Icons.Sliders/></div>
         <button className="db-btn-primary" onClick={() => setMod('seguridad')}>Consultar Guardián →</button>
       </div>
 
-      {/* Chatbot como feature principal */}
-      <div className="db-card" style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
-        <div className="db-card-header">
-          <div>
-            <div className="db-card-title">Guardián — Asistente de Seguridad</div>
-            <div className="db-card-subtitle">Consulta datos reales de seguridad en Medellín · Barrios · Comunas · Zonas</div>
+      {/* Seguridad + Explorar Medellín */}
+      <div style={{display:'grid',gridTemplateColumns:'1.6fr 1fr',gap:14,flex:1,overflow:'hidden',minHeight:0}}>
+        {/* Guardián preview */}
+        <div className="db-card" style={{display:'flex',flexDirection:'column',gap:14,overflow:'hidden'}}>
+          <div className="db-card-header" style={{marginBottom:0}}>
+            <div>
+              <div className="db-card-title">Guardián · Asistente de Seguridad</div>
+              <div className="db-card-subtitle">Consulta sobre barrios, zonas y criminalidad en Medellín</div>
+            </div>
+            <div style={{background:'var(--active-bg)',border:'1px solid var(--active-bd)',borderRadius:6,padding:'3px 8px',fontSize:11,fontWeight:700,color:'var(--accent)'}}>IA</div>
           </div>
-          <div style={{
-            background:'var(--active-bg)', border:'1px solid var(--active-bd)',
-            borderRadius:6, padding:'3px 8px', fontSize:11, fontWeight:700, color:'var(--accent)'
-          }}>IA</div>
+          <div style={{fontSize:13,color:'var(--text-mid)',lineHeight:1.7}}>
+            El Guardián analiza datos reales de criminalidad por comunas y te ayuda a tomar decisiones informadas sobre seguridad en la ciudad.
+          </div>
+          <div style={{display:'flex',flexDirection:'column',gap:8,flex:1}}>
+            <div style={{fontSize:11,fontWeight:700,letterSpacing:'.07em',textTransform:'uppercase',color:'var(--text-dim)'}}>
+              Puedes preguntarle sobre…
+            </div>
+            {SUGERENCIAS_SEG.slice(0,3).map((s,i)=>(
+              <div key={i} style={{
+                padding:'8px 12px',borderRadius:9,background:'var(--card-bg)',
+                border:'1px solid var(--card-border)',fontSize:12.5,color:'var(--text-mid)',
+                display:'flex',alignItems:'center',gap:8
+              }}>
+                <span style={{color:'var(--accent)',flexShrink:0}}>›</span>{s}
+              </div>
+            ))}
+          </div>
+          <button className="db-btn-primary" style={{marginLeft:0,width:'100%',textAlign:'center'}} onClick={()=>setMod('seguridad')}>
+            Abrir Guardián →
+          </button>
         </div>
-        <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
-          <ChatSeguridad/>
+
+        {/* Explorar Medellín */}
+        <div className="db-card" style={{display:'flex',flexDirection:'column',overflow:'hidden'}}>
+          <div className="db-card-header" style={{marginBottom:10,flexShrink:0}}>
+            <div>
+              <div className="db-card-title">Explorar Medellín</div>
+              <div className="db-card-subtitle">Zonas recomendadas para visitar</div>
+            </div>
+          </div>
+          <div style={{display:'flex',flexDirection:'column',gap:8,flex:1,minHeight:0}}>
+            {[
+              { zona:'El Poblado',  desc:'Zona rosa, restaurantes y comercio seguro',   tag:'Turístico',  color:'#00C896' },
+              { zona:'Laureles',    desc:'Parques, barrio residencial y gastronomía',    tag:'Familiar',   color:'#3B82F6' },
+              { zona:'Envigado',    desc:'Tranquilo, fácil acceso al metro',             tag:'Residencial',color:'#8B5CF6' },
+              { zona:'El Centro',   desc:'Historia, museos, Parque Berrío y el Metro',  tag:'Cultural',   color:'#F59E0B' },
+            ].map(({zona,desc,tag,color})=>(
+              <button key={zona} type="button"
+                onClick={()=>setMod('seguridad')}
+                style={{
+                  flex:1, display:'flex',alignItems:'center',gap:10,padding:'8px 12px',
+                  background:'var(--card-bg)',border:'1px solid var(--card-border)',
+                  borderRadius:11,cursor:'pointer',textAlign:'left',transition:'all .18s',
+                  width:'100%', fontFamily:'inherit', minHeight:0
+                }}
+                title={`Consultar seguridad de ${zona}`}
+              >
+                <div style={{width:8,height:8,borderRadius:'50%',background:color,flexShrink:0}} />
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:2}}>
+                    <span style={{fontSize:13,fontWeight:700,color:'var(--text-h)'}}>{zona}</span>
+                    <span style={{fontSize:9,fontWeight:700,letterSpacing:'.05em',textTransform:'uppercase',color,background:`${color}18`,border:`1px solid ${color}33`,padding:'1px 6px',borderRadius:100,flexShrink:0}}>{tag}</span>
+                  </div>
+                  <div style={{fontSize:11.5,color:'var(--text-dim)',lineHeight:1.3}}>{desc}</div>
+                </div>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Fila de módulos disponibles */}
+      {/* Módulos disponibles */}
       <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,flexShrink:0}}>
         {[
-          { icon:<Icons.Bolt/>, title:'Servicios EPM', desc:'Análisis de facturas con GPT-4o Vision. Recomendaciones de ahorro y predicción.', action:()=>setMod('servicios') },
-          { icon:<Icons.News/>, title:'Noticias',      desc:'Noticias verificadas de Medellín filtradas por categoría en tiempo real.',     action:()=>setMod('noticias') },
+          { icon:<Icons.Bolt/>, title:'Servicios EPM', desc:'Análisis de facturas con IA. Recomendaciones de ahorro y predicción.', action:()=>setMod('servicios') },
+          { icon:<Icons.News/>, title:'Noticias',      desc:'Noticias verificadas de Medellín filtradas por categoría en tiempo real.', action:()=>setMod('noticias') },
         ].map((item,i)=>(
-          <button
-            key={i}
-            type="button"
-            className="db-card db-card-action"
-            onClick={item.action}
+          <button key={i} type="button" className="db-card db-card-action" onClick={item.action}
             aria-label={`Abrir módulo ${item.title}`}
             style={{cursor:'pointer',padding:'16px 18px',display:'flex',alignItems:'flex-start',gap:14,textAlign:'left'}}
           >
-            <div style={{
-              width:38,height:38,borderRadius:10,background:'var(--active-bg)',
-              display:'flex',alignItems:'center',justifyContent:'center',
-              color:'var(--accent)',flexShrink:0
-            }}>
+            <div style={{width:38,height:38,borderRadius:10,background:'var(--active-bg)',display:'flex',alignItems:'center',justifyContent:'center',color:'var(--accent)',flexShrink:0}}>
               {item.icon}
             </div>
             <div>

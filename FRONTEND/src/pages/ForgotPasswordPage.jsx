@@ -13,14 +13,7 @@ export default function ForgotPasswordPage() {
 
       <div className="auth-reset-card">
         <Link to="/" className="auth-reset-brand">
-          <div className="auth-logo-mark">
-            <svg width="15" height="15" viewBox="0 0 36 36" fill="none">
-              <path d="M6 8C6 6.9 6.9 6 8 6H22C22 6 28 6 28 12V20" stroke="white" strokeWidth="3.4" strokeLinecap="round"/>
-              <path d="M6 8V28C6 29.1 6.9 30 8 30H28" stroke="white" strokeWidth="3.4" strokeLinecap="round"/>
-              <circle cx="25" cy="10" r="3" fill="white"/>
-            </svg>
-          </div>
-          <span className="auth-brand-name">MECIA</span>
+          <img src="/mecialogoog.png" alt="MECIA" className="auth-brand-logo-img" style={{height:36}} />
         </Link>
         <div className="auth-reset-icon">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none"

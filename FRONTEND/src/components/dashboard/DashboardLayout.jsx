@@ -1,5 +1,5 @@
 // src/components/dashboard/DashboardLayout.jsx
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTheme } from '@/hooks/useTheme';
 import AccessibilityHelpModal from '@/components/common/AccessibilityHelpModal';
@@ -75,6 +75,42 @@ export function TabBar({ tabs, active, onChange }) {
   );
 }
 
+/* ── StyledSelect ── */
+export function StyledSelect({ value, onChange, options, placeholder = 'Seleccionar', className = '' }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const close = (e) => { if (!ref.current?.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, []);
+
+  const selected = options.find(o => String(o.value) === String(value));
+
+  return (
+    <div ref={ref} className={`db-sel${open ? ' open' : ''}${className ? ' ' + className : ''}`}>
+      <button type="button" className="db-sel-trigger" onClick={() => setOpen(v => !v)}>
+        <span className="db-sel-value">{selected?.label ?? placeholder}</span>
+        <svg className="db-sel-arrow" viewBox="0 0 10 6" fill="none" aria-hidden="true">
+          <path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+        </svg>
+      </button>
+      {open && (
+        <div className="db-sel-dropdown" role="listbox" aria-label="Opciones">
+          {options.map(o => (
+            <button key={o.value} type="button" role="option"
+              aria-selected={String(o.value) === String(value)}
+              className={`db-sel-option${String(o.value) === String(value) ? ' active' : ''}`}
+              onClick={() => { onChange(o.value); setOpen(false); }}
+            >{o.label}</button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /**
  * DashboardLayout
  * colL = contenido principal (col izquierda)
@@ -92,9 +128,9 @@ export default function DashboardLayout({
   breadcrumb,
   colL,
   colR,
+  fullWidth,
   children,
 }) {
-  const [collapsed, setCollapsed] = useState(false);
   const { theme, toggle: toggleTheme } = useTheme();
 
   useEffect(() => {
@@ -118,15 +154,11 @@ export default function DashboardLayout({
       <div className="db-shell">
 
         {/* ══ SIDEBAR ══ */}
-        <aside className={`db-sidebar${collapsed ? ' collapsed' : ''}`} aria-label="Navegación lateral">
+        <aside className="db-sidebar" aria-label="Navegación lateral">
 
           <Link to="/" className="db-logo" aria-label="Ir al inicio de MECIA">
             <div className="db-logo-mark">
-              <svg width="13" height="13" viewBox="0 0 36 36" fill="none">
-                <path d="M6 8C6 6.9 6.9 6 8 6H22C22 6 28 6 28 12V20" stroke="white" strokeWidth="3.4" strokeLinecap="round"/>
-                <path d="M6 8V28C6 29.1 6.9 30 8 30H28" stroke="white" strokeWidth="3.4" strokeLinecap="round"/>
-                <circle cx="25" cy="10" r="3" fill="white"/>
-              </svg>
+              <img src="/mecialogoog.png" alt="MECIA" style={{width:'100%',height:'100%',objectFit:'contain',borderRadius:6}} />
             </div>
             <span className="db-logo-text">MECIA</span>
           </Link>
@@ -140,13 +172,13 @@ export default function DashboardLayout({
           </div>
 
           <nav className="db-nav" aria-label="Secciones principales" onKeyDown={(event) => moveFocusWithArrows(event, '.db-nav-item')}>
-            {!collapsed && <div className="db-nav-section">Navegación</div>}
+            <div className="db-nav-section">Navegación</div>
             {navItems.map(item => (
               <button
                 key={item.id}
                 className={`db-nav-item${activeItem === item.id ? ' active' : ''}`}
                 onClick={() => onSelect(item.id)}
-                title={collapsed ? item.label : undefined}
+                title={item.label}
                 aria-label={item.label}
                 aria-current={activeItem === item.id ? 'page' : undefined}
                 {...(item.chatbot && { 'data-chatbot-nav': 'true' })}
@@ -157,12 +189,9 @@ export default function DashboardLayout({
             ))}
           </nav>
 
-          {/* Footer: solo colapsar y logout — sin toggle de tema */}
+          {/* Footer: logout */}
           <div className="db-sidebar-footer">
-            <button className="db-toggle-btn" onClick={() => setCollapsed(c => !c)} title={collapsed ? 'Expandir' : 'Colapsar'} aria-label={collapsed ? 'Expandir barra lateral' : 'Colapsar barra lateral'}>
-              <Icons.ChevronLeft />
-            </button>
-            <button className="db-logout-btn" onClick={onLogout} title={collapsed ? 'Cerrar Sesión' : undefined} aria-label="Cerrar sesión">
+            <button className="db-logout-btn" onClick={onLogout} aria-label="Cerrar sesión">
               <span className="db-nav-icon"><Icons.LogOut /></span>
               <span className="db-nav-label">Cerrar Sesión</span>
             </button>
@@ -178,8 +207,6 @@ export default function DashboardLayout({
               <span className="bc-active">{breadcrumb || pageTitle}</span>
             </div>
             <div className="db-topbar-right">
-              <button className="db-icon-btn" title="Buscar" aria-label="Buscar"><Icons.Search /></button>
-              <button className="db-icon-btn dot" title="Notificaciones" aria-label="Notificaciones"><Icons.Bell /></button>
               <AccessibilityHelpModal />
               {/* Theme toggle — SOLO aquí, no en el sidebar */}
               <button className="db-theme-toggle" onClick={toggleTheme} title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'} aria-label={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'} aria-pressed={theme === 'dark'}>
@@ -189,7 +216,7 @@ export default function DashboardLayout({
             </div>
           </header>
 
-          <main className="db-content" id="db-main-content" tabIndex={-1}>
+          <main className={`db-content${fullWidth || !colR ? ' db-content--full' : ''}`} id="db-main-content" tabIndex={-1}>
             <div className="db-col-l">
               {(pageTitle || pageSubtitle) && (
                 <div className="db-page-header">
