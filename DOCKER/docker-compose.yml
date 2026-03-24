@@ -26,13 +26,24 @@ services:
     restart: unless-stopped
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
+  telegram_bot:
+    build:
+      context: ../BACKEND
+      dockerfile: Dockerfile
+    env_file:
+      - ../BACKEND/.env
+    volumes:
+      - ../BACKEND:/app
+    restart: unless-stopped
+    command: python start_telegram_bot.py
+
   frontend:
     build:
       context: ../FRONTEND
       dockerfile: Dockerfile
       target: deps
     ports:
-      - "3000:5173"
+      - "3001:5173"
     depends_on:
       - backend
     volumes:

@@ -18,6 +18,11 @@ class Settings(BaseSettings):
     
     # Configuración de base de datos
     DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql://mecia_user:mecia_password@db:5432/mecia")
+    LOCAL_DATABASE_URL: str = os.getenv("LOCAL_DATABASE_URL", "sqlite:///./mecia.db")
+    DB_FALLBACK_TO_LOCAL: bool = os.getenv("DB_FALLBACK_TO_LOCAL", "False").lower() == "true"
+    DB_CONNECT_TIMEOUT: int = int(os.getenv("DB_CONNECT_TIMEOUT", "8"))
+    DB_PRECHECK_TIMEOUT: int = int(os.getenv("DB_PRECHECK_TIMEOUT", "8"))
+    DB_USE_PRECHECK: bool = os.getenv("DB_USE_PRECHECK", "False").lower() == "true"
     
     # Configuración JWT (tokens de seguridad)
     SECRET_KEY: str = os.getenv(
