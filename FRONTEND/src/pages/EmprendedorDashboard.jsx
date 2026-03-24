@@ -5,7 +5,7 @@ import authService from '@/services/authService';
 import { llmService } from '@/services/llmService';
 import { datasetsService } from '@/services/datasetsService';
 
-import DashboardLayout, { Icons, TabBar } from '@/components/dashboard/DashboardLayout';
+import DashboardLayout, { Icons, StyledSelect } from '@/components/dashboard/DashboardLayout';
 import ChatMap from '@/components/ChatMap';
 
 const NAV = [
@@ -153,16 +153,17 @@ function ChatEmprendedor({ conversationId, onConversationChange }) {
 /* ════════════════════════════════
    LISTA DE CONVERSACIONES (styled)
 ════════════════════════════════ */
-function ConvList({ currentId, onSelect, onNew, onDelete }) {
+function ConvList({ currentId, onSelect, onNew, onDelete, refreshKey }) {
   const [convs, setConvs] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    setLoading(true);
     llmService.getConversations()
       .then(r => { if(r.success) setConvs(r.data||[]); })
       .catch(()=>{})
       .finally(() => setLoading(false));
-  }, []);
+  }, [refreshKey]);
 
   const del = async (e,id) => {
     e.stopPropagation();
@@ -205,108 +206,144 @@ function ConvList({ currentId, onSelect, onNew, onDelete }) {
 /* ════════════════════════════════
    INSIGHTS WIDGET (barras)
 ════════════════════════════════ */
+const ACT_PAGE_SIZE = 4;
+
 function InsightsWidget() {
   const [years, setYears]               = useState([]);
   const [selectedYear, setSelectedYear] = useState('');
-  const [limit, setLimit]               = useState(5);
   const [loading, setLoading]           = useState(true);
   const [summary, setSummary]           = useState(null);
   const [topActividades, setTopAct]     = useState([]);
   const [topComunas, setTopCom]         = useState([]);
   const [overview, setOverview]         = useState(null);
+  const [actPage, setActPage]           = useState(0);
+  const [insightTab, setInsightTab]     = useState('zonas');
 
   useEffect(() => { datasetsService.getEmpresarialYears().then(r=>setYears(r?.data||[])).catch(()=>{}); }, []);
 
   useEffect(() => {
     const y = selectedYear==='' ? null : Number(selectedYear);
-    setLoading(true);
-    Promise.all([
-      datasetsService.getEmprendedorOverview(y, limit),
-      datasetsService.getEmpresarialSummary(y),
-      datasetsService.getEmpresarialTopActividades(y, limit),
-      datasetsService.getEmpresarialTopComunas(y, limit),
-    ]).then(([ov,sum,act,com])=>{
-      setOverview(ov?.data||null); setSummary(sum?.data||null);
-      setTopAct(act?.data||[]); setTopCom(com?.data||[]);
-    }).catch(()=>{}).finally(()=>setLoading(false));
-  }, [selectedYear, limit]);
+    let active = true;
+    // Use microtask so state resets don't run synchronously in effect body
+    Promise.resolve().then(() => {
+      if (!active) return;
+      setLoading(true);
+      setActPage(0);
+      return Promise.all([
+        datasetsService.getEmprendedorOverview(y, 12),
+        datasetsService.getEmpresarialSummary(y),
+        datasetsService.getEmpresarialTopActividades(y, 12),
+        datasetsService.getEmpresarialTopComunas(y, 10),
+      ]).then(([ov,sum,act,com])=>{
+        if (!active) return;
+        setOverview(ov?.data||null); setSummary(sum?.data||null);
+        setTopAct(act?.data||[]);
+        setTopCom((com?.data||[]).filter(c => c.comuna && !c.comuna.toLowerCase().includes('georreferenc')));
+        setLoading(false);
+      }).catch(()=>{ if (active) setLoading(false); });
+    });
+    return () => { active = false; };
+  }, [selectedYear]);
 
   const maxA = useMemo(()=>Math.max(...topActividades.map(i=>i.total_empresas||0),1),[topActividades]);
-  const maxC = useMemo(()=>Math.max(...topComunas.map(i=>i.total_empresas||0),1),[topComunas]);
+  const actTotal = Math.ceil(topActividades.length / ACT_PAGE_SIZE);
+  const actSlice = topActividades.slice(actPage * ACT_PAGE_SIZE, (actPage + 1) * ACT_PAGE_SIZE);
 
-  if(loading) return <div style={{fontSize:13,color:'var(--text-dim)'}}>Cargando datos empresariales...</div>;
+  if(loading) return <div style={{fontSize:13,color:'var(--text-dim)'}}>Cargando inteligencia empresarial...</div>;
+
+  const crimComuna = overview?.criminalidad?.comuna_mas_afectada || '';
+  const oportunidadZonas = topComunas.filter(c => c.comuna !== crimComuna).slice(0, 3);
 
   return (
-    <div style={{display:'flex',flexDirection:'column',gap:16}}>
-      {/* Controles */}
-      <div style={{display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
-        <select className="db-news-select" value={selectedYear} onChange={e=>setSelectedYear(e.target.value)}>
-          <option value="">Todos los años</option>
-          {years.map(y=><option key={y} value={y}>{y}</option>)}
-        </select>
-        <div style={{display:'flex',alignItems:'center',gap:8,fontSize:13,color:'var(--text-mid)'}}>
-          <span>Top</span>
-          <input type="range" min="3" max="10" value={limit} onChange={e=>setLimit(Number(e.target.value))} style={{accentColor:'var(--accent)',width:80}}/>
-          <b style={{color:'var(--text-h)'}}>{limit}</b>
+    <div style={{display:'flex',flexDirection:'column',gap:14,height:'100%'}}>
+      {/* Controles + tabs en una fila */}
+      <div style={{display:'flex',alignItems:'center',gap:10,flexShrink:0,flexWrap:'wrap'}}>
+        <StyledSelect
+          value={selectedYear}
+          onChange={setSelectedYear}
+          options={[{value:'',label:'Todos los años'}, ...years.map(y=>({value:String(y),label:String(y)}))]}
+        />
+        <div style={{display:'flex',gap:6,marginLeft:'auto'}}>
+          {[['zonas','Zonas'],['sectores','Sectores']].map(([id,label])=>(
+            <button key={id} className={`db-fpill${insightTab===id?' active':''}`} onClick={()=>setInsightTab(id)} style={{padding:'5px 14px',fontSize:12}}>{label}</button>
+          ))}
         </div>
       </div>
 
       {/* Stats */}
       {summary && (
-        <div className="db-insights-stats" style={{gridTemplateColumns:'repeat(4,1fr)'}}>
+        <div className="db-insights-stats" style={{gridTemplateColumns:'repeat(4,1fr)',flexShrink:0}}>
           {[
-            {label:'Total empresas',    value:`${(summary.total_empresas/1000).toFixed(1)}k`},
-            {label:'Actividades',       value:summary.total_actividades},
-            {label:'Comuna top empr.',  value:summary.comuna_top?.nombre||'N/A', small:true},
-            {label:'+ criminalidad',    value:overview?.criminalidad?.comuna_mas_afectada||'N/A', small:true, cls:'red'},
+            {label:'Empresas',      value:`${(summary.total_empresas/1000).toFixed(1)}k`, tooltip:'Total de empresas registradas formalmente en Medellín'},
+            {label:'Sectores',      value:summary.total_actividades, tooltip:'Sectores económicos activos (CIIU-DANE)'},
+            {label:'Zona más activa', value:summary.comuna_top?.nombre||'N/A', small:true, tooltip:'Mayor concentración de empresas'},
+            {label:'Mayor riesgo',   value:crimComuna||'N/A', small:true, cls:'red', tooltip:'Zona con mayor índice de criminalidad'},
           ].map((s,i)=>(
-            <div key={i} className="db-insights-stat">
+            <div key={i} className="db-insights-stat" data-tooltip={s.tooltip}>
               <div className="db-insights-stat-label">{s.label}</div>
-              <div className={`db-insights-stat-value${s.cls?' '+s.cls:''}`} style={s.small?{fontSize:13,marginTop:2}:{}}>{s.value}</div>
+              <div className={`db-insights-stat-value${s.cls?' '+s.cls:''}`} style={s.small?{fontSize:12,marginTop:2}:{}}>{s.value}</div>
             </div>
           ))}
         </div>
       )}
 
-      {/* Actividades */}
-      <div>
-        <div style={{fontSize:11,fontWeight:700,letterSpacing:'.07em',textTransform:'uppercase',color:'var(--text-dim)',marginBottom:10}}>
-          Top Actividades Económicas
-        </div>
-        {topActividades.map((item,i)=>{
-          const w = Math.max(8,Math.round(((item.total_empresas||0)/maxA)*100));
-          return (
-            <div key={i} className="db-bar-item">
-              <div className="db-bar-row">
-                <span style={{maxWidth:260,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{item.descripcion}</span>
-                <b>{(item.total_empresas||0).toLocaleString('es-CO')}</b>
+      {/* TAB: Zonas de oportunidad */}
+      {insightTab === 'zonas' && (
+        <div style={{display:'flex',flexDirection:'column',gap:8,flex:1}}>
+          <div style={{background:'var(--active-bg)',border:'1px solid var(--active-bd)',borderRadius:10,padding:'10px 14px',fontSize:12.5,color:'var(--text-mid)',lineHeight:1.55,flexShrink:0}}>
+            Cruza <b style={{color:'var(--text-h)'}}>actividad empresarial</b> con <b style={{color:'#f87171'}}>criminalidad</b> para detectar zonas con alta oportunidad y menor riesgo.
+          </div>
+          {oportunidadZonas.length > 0 ? oportunidadZonas.map((item,i)=>(
+            <div key={i} data-tooltip={`${(item.total_empresas||0).toLocaleString('es-CO')} empresas · No es la zona de mayor riesgo`}
+              style={{display:'flex',alignItems:'center',gap:12,padding:'10px 14px',background:'rgba(0,200,150,.07)',border:'1px solid rgba(0,200,150,.18)',borderRadius:11,cursor:'default',flex:1}}
+            >
+              <div style={{width:28,height:28,borderRadius:8,background:'rgba(0,200,150,.18)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,fontWeight:800,color:'var(--accent)',flexShrink:0}}>#{i+1}</div>
+              <div style={{flex:1}}>
+                <div style={{fontSize:13.5,fontWeight:700,color:'var(--text-h)'}}>{item.comuna}</div>
+                <div style={{fontSize:11.5,color:'var(--text-mid)',marginTop:1}}>{(item.total_empresas||0).toLocaleString('es-CO')} empresas registradas</div>
               </div>
-              <div className="db-bar-track"><div className="db-bar-fill" style={{width:`${w}%`}}/></div>
-              <div className="db-bar-sub">CIIU {item.ciiu} · {item.top_comuna}</div>
+              <span style={{fontSize:10,fontWeight:700,background:'rgba(0,200,150,.15)',border:'1px solid rgba(0,200,150,.30)',color:'var(--accent)',padding:'3px 9px',borderRadius:100,letterSpacing:'.04em'}}>OPORTUNIDAD</span>
             </div>
-          );
-        })}
-      </div>
+          )) : (
+            <div style={{fontSize:12,color:'var(--text-dim)',padding:'10px 0'}}>No hay datos de zonas disponibles para el año seleccionado.</div>
+          )}
+        </div>
+      )}
 
-      {/* Comunas */}
-      <div>
-        <div style={{fontSize:11,fontWeight:700,letterSpacing:'.07em',textTransform:'uppercase',color:'var(--text-dim)',marginBottom:10}}>
-          Top Comunas por Empresas
-        </div>
-        {topComunas.map((item,i)=>{
-          const w = Math.max(8,Math.round(((item.total_empresas||0)/maxC)*100));
-          return (
-            <div key={i} className="db-bar-item">
-              <div className="db-bar-row">
-                <span>{item.comuna}</span>
-                <b>{(item.total_empresas||0).toLocaleString('es-CO')}</b>
-              </div>
-              <div className="db-bar-track">
-                <div className="db-bar-fill" style={{width:`${w}%`,background:'linear-gradient(90deg,#239677,#00C896)'}}/></div>
+      {/* TAB: Sectores activos */}
+      {insightTab === 'sectores' && (
+        <div style={{display:'flex',flexDirection:'column',gap:6,flex:1}}>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:4,flexShrink:0}}>
+            <div style={{fontSize:11,fontWeight:700,letterSpacing:'.07em',textTransform:'uppercase',color:'var(--text-dim)'}}>
+              Sectores con más empresas
             </div>
-          );
-        })}
-      </div>
+            {actTotal > 1 && (
+              <div style={{fontSize:11,color:'var(--text-dim)'}}>{actPage+1}/{actTotal}</div>
+            )}
+          </div>
+          {actSlice.map((item,i)=>{
+            const w = Math.max(8,Math.round(((item.total_empresas||0)/maxA)*100));
+            return (
+              <div key={i} className="db-bar-item" style={{flex:1,justifyContent:'center'}}
+                data-tooltip={`CIIU ${item.ciiu} · ${(item.total_empresas||0).toLocaleString('es-CO')} empresas · Zona: ${item.top_comuna||'N/A'}`}
+              >
+                <div className="db-bar-row">
+                  <span style={{whiteSpace:'normal',lineHeight:1.35,maxWidth:'70%'}}>{item.descripcion}</span>
+                  <b>{(item.total_empresas||0).toLocaleString('es-CO')}</b>
+                </div>
+                <div className="db-bar-track"><div className="db-bar-fill" style={{width:`${w}%`}}/></div>
+                <div className="db-bar-sub">Principal en {item.top_comuna||'N/A'}</div>
+              </div>
+            );
+          })}
+          {actTotal > 1 && (
+            <div style={{display:'flex',justifyContent:'center',gap:8,marginTop:4,flexShrink:0}}>
+              <button className="db-fpill" onClick={()=>setActPage(p=>Math.max(0,p-1))} disabled={actPage===0} style={{padding:'5px 14px',fontSize:12,opacity:actPage===0?.4:1}}>← Ant.</button>
+              <button className="db-fpill" onClick={()=>setActPage(p=>Math.min(actTotal-1,p+1))} disabled={actPage>=actTotal-1} style={{padding:'5px 14px',fontSize:12,opacity:actPage>=actTotal-1?.4:1}}>Sig. →</button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -336,8 +373,8 @@ function NegociosWidget() {
     const q={comuna:filters.comuna||null,categoria:filters.categoria||null,fecha_recoleccion:filters.fecha_recoleccion||null};
     Promise.all([
       datasetsService.getNegociosMedellinSummary(q),
-      datasetsService.getNegociosMedellinTopBarrios({...q,limit:6}),
-      datasetsService.getNegociosMedellinTopTipos({...q,limit:6}),
+      datasetsService.getNegociosMedellinTopBarrios({...q,limit:9}),
+      datasetsService.getNegociosMedellinTopTipos({...q,limit:9}),
     ]).then(([s,b,t])=>{
       setSummary(s?.data||null);
       setTopBarrios(b?.data||[]);
@@ -352,34 +389,38 @@ function NegociosWidget() {
   if(loading) return <div style={{fontSize:13,color:'var(--text-dim)'}}>Cargando negocios...</div>;
 
   return (
-    <div style={{display:'flex',flexDirection:'column',gap:14}}>
+    <div style={{display:'flex',flexDirection:'column',gap:12,height:'100%'}}>
       {/* Filtros */}
-      <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
-        <select className="db-news-select" value={filters.comuna} onChange={e=>setF('comuna',e.target.value)}>
-          <option value="">Todas las comunas</option>
-          {available.comunas.map(o=><option key={o} value={o}>{o}</option>)}
-        </select>
-        <select className="db-news-select" value={filters.categoria} onChange={e=>setF('categoria',e.target.value)}>
-          <option value="">Todas las categorías</option>
-          {available.categorias.map(o=><option key={o} value={o}>{o}</option>)}
-        </select>
+      <div style={{display:'flex',gap:8,flexWrap:'wrap',flexShrink:0}}>
+        <StyledSelect
+          value={filters.comuna}
+          onChange={v=>setF('comuna',v)}
+          options={[{value:'',label:'Todas las comunas'}, ...available.comunas.map(o=>({value:o,label:o}))]}
+        />
+        <StyledSelect
+          value={filters.categoria}
+          onChange={v=>setF('categoria',v)}
+          options={[{value:'',label:'Todas las categorías'}, ...available.categorias.map(o=>({value:o,label:o}))]}
+        />
         {available.fechas_recoleccion.length>0 && (
-          <select className="db-news-select" value={filters.fecha_recoleccion} onChange={e=>setF('fecha_recoleccion',e.target.value)}>
-            {available.fechas_recoleccion.map(f=><option key={f} value={f}>{f}</option>)}
-          </select>
+          <StyledSelect
+            value={filters.fecha_recoleccion}
+            onChange={v=>setF('fecha_recoleccion',v)}
+            options={available.fechas_recoleccion.map(f=>({value:f,label:f}))}
+          />
         )}
       </div>
 
       {/* Stats */}
       {summary && (
-        <div className="db-insights-stats" style={{gridTemplateColumns:'repeat(4,1fr)'}}>
+        <div className="db-insights-stats" style={{gridTemplateColumns:'repeat(4,1fr)',flexShrink:0}}>
           {[
-            {label:'Registros',    value:(summary.total_registros||0).toLocaleString('es-CO')},
-            {label:'Cantidad',     value:(summary.total_cantidad||0).toLocaleString('es-CO')},
-            {label:'Barrios únicos',value:summary.barrios_unicos||0},
-            {label:'Tipos',        value:summary.tipos_unicos||0},
+            {label:'Registros', value:(summary.total_registros||0).toLocaleString('es-CO'), tooltip:'Establecimientos registrados con los filtros actuales'},
+            {label:'Unidades',  value:(summary.total_cantidad||0).toLocaleString('es-CO'),  tooltip:'Total de unidades de negocio contadas'},
+            {label:'Barrios',   value:summary.barrios_unicos||0, tooltip:'Barrios distintos con negocios en la selección'},
+            {label:'Tipos',     value:summary.tipos_unicos||0,   tooltip:'Categorías únicas de negocios en la selección'},
           ].map((s,i)=>(
-            <div key={i} className="db-insights-stat">
+            <div key={i} className="db-insights-stat" data-tooltip={s.tooltip}>
               <div className="db-insights-stat-label">{s.label}</div>
               <div className="db-insights-stat-value">{s.value}</div>
             </div>
@@ -387,18 +428,18 @@ function NegociosWidget() {
         </div>
       )}
 
-      {/* Barras */}
-      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16}}>
-        <div>
-          <div style={{fontSize:11,fontWeight:700,letterSpacing:'.07em',textTransform:'uppercase',color:'var(--text-dim)',marginBottom:10}}>
+      {/* Barras — flex:1 para llenar el espacio */}
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,flex:1,minHeight:0}}>
+        <div style={{display:'flex',flexDirection:'column'}}>
+          <div style={{fontSize:11,fontWeight:700,letterSpacing:'.07em',textTransform:'uppercase',color:'var(--text-dim)',marginBottom:8,flexShrink:0}}>
             Top Barrios
           </div>
           {topBarrios.map((item,i)=>{
             const w=Math.max(8,Math.round(((item.total_cantidad||0)/maxB)*100));
             return (
-              <div key={i} className="db-bar-item">
+              <div key={i} className="db-bar-item" style={{flex:1,justifyContent:'center'}}>
                 <div className="db-bar-row">
-                  <span style={{fontSize:12.5}}>C{item.comuna} · {item.barrio}</span>
+                  <span style={{fontSize:12}}>C{item.comuna} · {item.barrio}</span>
                   <b>{item.total_cantidad}</b>
                 </div>
                 <div className="db-bar-track"><div className="db-bar-fill" style={{width:`${w}%`}}/></div>
@@ -406,16 +447,16 @@ function NegociosWidget() {
             );
           })}
         </div>
-        <div>
-          <div style={{fontSize:11,fontWeight:700,letterSpacing:'.07em',textTransform:'uppercase',color:'var(--text-dim)',marginBottom:10}}>
-            Top Tipos
+        <div style={{display:'flex',flexDirection:'column'}}>
+          <div style={{fontSize:11,fontWeight:700,letterSpacing:'.07em',textTransform:'uppercase',color:'var(--text-dim)',marginBottom:8,flexShrink:0}}>
+            Top Tipos de negocio
           </div>
           {topTipos.map((item,i)=>{
             const w=Math.max(8,Math.round(((item.total_cantidad||0)/maxT)*100));
             return (
-              <div key={i} className="db-bar-item">
+              <div key={i} className="db-bar-item" style={{flex:1,justifyContent:'center'}}>
                 <div className="db-bar-row">
-                  <span style={{fontSize:12.5,maxWidth:120,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{item.tipo_negocio}</span>
+                  <span style={{fontSize:12,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:'68%'}}>{item.tipo_negocio}</span>
                   <b>{item.total_cantidad}</b>
                 </div>
                 <div className="db-bar-track">
@@ -466,9 +507,9 @@ function CoberturaWidget() {
   if(loading) return <div style={{fontSize:13,color:'var(--text-dim)'}}>Cargando datos EPM...</div>;
 
   return (
-    <div style={{display:'flex',flexDirection:'column',gap:14}}>
+    <div style={{display:'flex',flexDirection:'column',gap:14,height:'100%'}}>
       {/* Toggle */}
-      <div style={{display:'flex',gap:8}}>
+      <div style={{display:'flex',gap:8,flexShrink:0}}>
         {[['estratificacion','Estratificación'],['tarifas','Tarifas EPM']].map(([id,label])=>(
           <button key={id} className={`db-fpill${view===id?' active':''}`} onClick={()=>setView(id)}>{label}</button>
         ))}
@@ -476,33 +517,36 @@ function CoberturaWidget() {
 
       {view==='estratificacion' && (
         <>
-          <select className="db-news-select" value={periodo} onChange={e=>setPeriodo(e.target.value)}>
-            <option value="">Todos los periodos</option>
-            {periodos.map(p=><option key={p} value={p}>{p}</option>)}
-          </select>
+          <StyledSelect
+            value={periodo}
+            onChange={setPeriodo}
+            options={[{value:'',label:'Todos los periodos'}, ...periodos.map(p=>({value:p,label:p}))]}
+          />
           {summary && (
-            <div className="db-insights-stats">
+            <div className="db-insights-stats" style={{flexShrink:0}}>
               {[
-                {label:'Suscriptores',  value:`${((summary.total_suscriptores||0)/1000).toFixed(0)}k`},
-                {label:'Cobertura prom.',value:`${Number(summary.cobertura_promedio||0).toFixed(1)}%`},
-                {label:'Servicio líder', value:porServicio[0]?.servicio||'N/A', small:true},
-                {label:'Periodo',        value:periodo||'Todos',                 small:true},
+                {label:'Suscriptores',   value:`${((summary.total_suscriptores||0)/1000).toFixed(0)}k`, tooltip:'Total de hogares/negocios suscritos a servicios EPM'},
+                {label:'Cobertura prom.',value:`${Number(summary.cobertura_promedio||0).toFixed(1)}%`,  tooltip:'Porcentaje promedio de cobertura de todos los servicios públicos'},
+                {label:'Servicio líder', value:porServicio[0]?.servicio||'N/A', small:true, tooltip:'El servicio con más suscriptores en Medellín'},
+                {label:'Periodo',        value:periodo||'Todos', small:true, tooltip:'Período de recolección de los datos mostrados'},
               ].map((s,i)=>(
-                <div key={i} className="db-insights-stat">
+                <div key={i} className="db-insights-stat" data-tooltip={s.tooltip}>
                   <div className="db-insights-stat-label">{s.label}</div>
                   <div className="db-insights-stat-value" style={s.small?{fontSize:13,marginTop:2}:{}}>{s.value}</div>
                 </div>
               ))}
             </div>
           )}
-          <div>
-            <div style={{fontSize:11,fontWeight:700,letterSpacing:'.07em',textTransform:'uppercase',color:'var(--text-dim)',marginBottom:10}}>
-              Suscriptores por servicio
+          <div style={{display:'flex',flexDirection:'column',flex:1,minHeight:0}}>
+            <div style={{fontSize:11,fontWeight:700,letterSpacing:'.07em',textTransform:'uppercase',color:'var(--text-dim)',marginBottom:8,flexShrink:0}}>
+              Suscriptores por servicio público
             </div>
-            {porServicio.slice(0,5).map((item,i)=>{
+            {porServicio.map((item,i)=>{
               const w=Math.max(8,Math.round(((item.total_suscriptores||0)/maxS)*100));
               return (
-                <div key={i} className="db-bar-item">
+                <div key={i} className="db-bar-item" style={{flex:1,justifyContent:'center'}}
+                  data-tooltip={`${(item.total_suscriptores||0).toLocaleString('es-CO')} suscriptores en ${item.servicio}`}
+                >
                   <div className="db-bar-row"><span>{item.servicio}</span><b>{(item.total_suscriptores||0).toLocaleString('es-CO')}</b></div>
                   <div className="db-bar-track"><div className="db-bar-fill" style={{width:`${w}%`}}/></div>
                 </div>
@@ -515,39 +559,42 @@ function CoberturaWidget() {
       {view==='tarifas' && (
         <>
           <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
-            <select className="db-news-select" value={tarifaDs} onChange={e=>setTarifaDs(e.target.value)}>
-              <option value="acueducto">Acueducto</option>
-              <option value="gas">Gas</option>
-              <option value="energia">Energía</option>
-            </select>
-            <select className="db-news-select" value={tarifaYear} onChange={e=>setTarifaYear(e.target.value)}>
-              <option value="">Todos los años</option>
-              {tarifaYears.map(y=><option key={y} value={y}>{y}</option>)}
-            </select>
+            <StyledSelect
+              value={tarifaDs}
+              onChange={setTarifaDs}
+              options={[{value:'acueducto',label:'Acueducto'},{value:'gas',label:'Gas'},{value:'energia',label:'Energía'}]}
+            />
+            <StyledSelect
+              value={tarifaYear}
+              onChange={setTarifaYear}
+              options={[{value:'',label:'Todos los años'}, ...tarifaYears.map(y=>({value:String(y),label:String(y)}))]}
+            />
           </div>
           {tarifaSummary && (
             <div className="db-insights-stats">
               {[
-                {label:'Dataset',         value:tarifaDs,              small:true},
-                {label:'Tarifa promedio', value:`$${Number(tarifaSummary.tarifa_promedio||0).toLocaleString('es-CO')}`},
-                {label:'Registros',       value:(tarifaSummary.total_registros||0).toLocaleString('es-CO')},
-                {label:'Años disponibles',value:tarifaYears.length||0},
+                {label:'Servicio',        value:tarifaDs, small:true, tooltip:`Servicio público seleccionado para ver tarifas`},
+                {label:'Tarifa promedio', value:`$${Number(tarifaSummary.tarifa_promedio||0).toLocaleString('es-CO')}`, tooltip:'Costo promedio mensual de este servicio en Medellín — útil para estimar gastos operativos'},
+                {label:'Registros',       value:(tarifaSummary.total_registros||0).toLocaleString('es-CO'), tooltip:'Número de registros tarifarios en la base de datos'},
+                {label:'Años disponibles',value:tarifaYears.length||0, tooltip:'Años con datos de tarifas disponibles para análisis histórico'},
               ].map((s,i)=>(
-                <div key={i} className="db-insights-stat">
+                <div key={i} className="db-insights-stat" data-tooltip={s.tooltip}>
                   <div className="db-insights-stat-label">{s.label}</div>
                   <div className="db-insights-stat-value" style={s.small?{fontSize:13,marginTop:2}:{}}>{s.value}</div>
                 </div>
               ))}
             </div>
           )}
-          <div>
-            <div style={{fontSize:11,fontWeight:700,letterSpacing:'.07em',textTransform:'uppercase',color:'var(--text-dim)',marginBottom:10}}>
-              Tarifa promedio por estrato
+          <div style={{display:'flex',flexDirection:'column',flex:1,minHeight:0}}>
+            <div style={{fontSize:11,fontWeight:700,letterSpacing:'.07em',textTransform:'uppercase',color:'var(--text-dim)',marginBottom:8,flexShrink:0}}>
+              Tarifa promedio por estrato socioeconómico
             </div>
             {tarifaEstrato.filter(i=>i.estrato).map((item,i)=>{
               const w=Math.max(8,Math.round(((item.tarifa_promedio||0)/maxE)*100));
               return (
-                <div key={i} className="db-bar-item">
+                <div key={i} className="db-bar-item" style={{flex:1,justifyContent:'center'}}
+                  data-tooltip={`Estrato ${item.estrato}: $${Number(item.tarifa_promedio||0).toLocaleString('es-CO')}/mes · considera el estrato de tu zona`}
+                >
                   <div className="db-bar-row"><span>Estrato {item.estrato}</span><b>${Number(item.tarifa_promedio||0).toLocaleString('es-CO')}</b></div>
                   <div className="db-bar-track">
                     <div className="db-bar-fill" style={{width:`${w}%`,background:'linear-gradient(90deg,#239677,#00C896)'}}/></div>
@@ -569,12 +616,13 @@ export default function EmprendedorDashboard() {
   const [user, setUser]     = useState(null);
   const [loading, setLoading] = useState(true);
   const [mod, setMod]       = useState('inicio');
-  const [negTab, setNegTab] = useState('negocios');
   const [convId, setConvId] = useState(null);
 
   // Datos para inicio
-  const [summary, setSummary]       = useState(null);
-  const [topComunas, setTopComunas] = useState([]);
+  const [summary, setSummary]             = useState(null);
+  const [topComunas, setTopComunas]       = useState([]);
+  const [topActividades, setTopActs]      = useState([]);
+  const [convListKey, setConvListKey]     = useState(0);
 
   useEffect(() => {
     authService.getMe().then(setUser).catch(()=>navigate('/login')).finally(()=>setLoading(false));
@@ -584,11 +632,19 @@ export default function EmprendedorDashboard() {
   useEffect(() => {
     datasetsService.getEmpresarialSummary(null)
       .then(r => { if(r?.data) setSummary(r.data); }).catch(()=>{});
-    datasetsService.getEmpresarialTopComunas(null, 4)
-      .then(r => setTopComunas(r?.data||[])).catch(()=>{});
+    datasetsService.getEmpresarialTopComunas(null, 8)
+      .then(r => setTopComunas((r?.data||[]).filter(c => c.comuna && !c.comuna.toLowerCase().includes('georreferenc')).slice(0,5))).catch(()=>{});
+    datasetsService.getEmpresarialTopActividades(null, 5)
+      .then(r => setTopActs(r?.data||[])).catch(()=>{});
   }, []);
 
   const handleLogout = () => { authService.logout(); navigate('/login'); };
+
+  // Cuando se crea una conversación nueva, refrescar la lista
+  const handleConversationChange = (newId) => {
+    if (!convId && newId) setConvListKey(k => k + 1);
+    setConvId(newId);
+  };
 
   if(loading) return <div className="db-loading"><div className="db-spinner"/>Cargando inteligencia empresarial…</div>;
   if(!user) return null;
@@ -604,152 +660,334 @@ export default function EmprendedorDashboard() {
   };
   const m = META[mod];
 
-  /* ══ COL-R (iguales para todos los módulos) ══ */
-  const rightCol = (
-    <>
-      {/* Nota */}
-      <div className="db-rc db-card-note" style={{flexShrink:0}}>
-        <div className="db-card-header">
-          <span className="db-card-title">Panel Emprendedor</span>
-          <button className="db-edit-btn"><Icons.Pencil/></button>
-        </div>
-        <div className="db-note-body">
-          Datos <b>reales de Medellín</b> para tomar mejores decisiones de negocio. Consulta el asesor IA para análisis de viabilidad.
-        </div>
-        <div className="db-note-footer">
-          <span className="db-note-time">Medellín · Valle de Aburrá</span>
-          <div className="db-note-badge"><span className="ck">✓</span> IA Activa</div>
-        </div>
+  /* ══ COL-R dinámico ══ */
+  // Bloque "Panel Emprendedor" — sin ícono de edición
+  const panelEmprendedor = (
+    <div className="db-rc db-card-note" style={{flexShrink:0}}>
+      <div className="db-card-header">
+        <span className="db-card-title">Panel Emprendedor</span>
       </div>
+      <div className="db-note-body">
+        Datos <b>reales de Medellín</b> para tomar mejores decisiones de negocio. Consulta el asesor IA para análisis de viabilidad.
+      </div>
+      <div className="db-note-footer">
+        <span className="db-note-time">Medellín · Valle de Aburrá</span>
+        <div className="db-note-badge"><span className="ck">✓</span> IA Activa</div>
+      </div>
+    </div>
+  );
 
-      {/* Stats empresariales */}
-      {summary && (
-        <div className="db-rc" style={{flexShrink:0}}>
-          <div className="db-card-header" style={{marginBottom:10}}>
-            <span className="db-card-title">Resumen Empresarial</span>
+  const rightColByMod = {
+    inicio: (
+      <>
+        {panelEmprendedor}
+        {topActividades.length > 0 && (() => {
+          const total = topActividades.reduce((s,i)=>s+(i.total_empresas||0),0);
+          const colors = ['#00C896','#239677','#60a5fa','#f59e0b','#c084fc'];
+          return (
+            <div className="db-rc" style={{flexShrink:0}}>
+              <div className="db-card-header" style={{marginBottom:10}}>
+                <span className="db-card-title">Participación sectorial</span>
+              </div>
+              {/* Mini donut bar */}
+              <div style={{height:8,borderRadius:4,display:'flex',overflow:'hidden',gap:1,marginBottom:12}}>
+                {topActividades.slice(0,5).map((item,i)=>{
+                  const pct = total > 0 ? ((item.total_empresas||0)/total*100) : 0;
+                  return <div key={i} style={{width:`${pct}%`,background:colors[i]}}/>;
+                })}
+                <div style={{flex:1,background:'rgba(255,255,255,.07)'}}/>
+              </div>
+              {topActividades.slice(0,5).map((item,i)=>{
+                const pct = total > 0 ? ((item.total_empresas||0)/total*100) : 0;
+                return (
+                  <div key={i} style={{display:'flex',alignItems:'center',gap:8,marginBottom:7}} data-tooltip={`${(item.total_empresas||0).toLocaleString('es-CO')} empresas en este sector`}>
+                    <div style={{width:8,height:8,borderRadius:2,background:colors[i],flexShrink:0}}/>
+                    <div style={{flex:1,fontSize:11.5,color:'var(--text-mid)',lineHeight:1.3,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{item.descripcion}</div>
+                    <div style={{fontSize:11.5,fontWeight:700,color:'var(--text-h)',flexShrink:0}}>{pct.toFixed(1)}%</div>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()}
+        <div className="db-rc" style={{flex:1,display:'flex',flexDirection:'column',minHeight:0}}>
+          <div className="db-card-header" style={{marginBottom:8,flexShrink:0}}>
+            <span className="db-card-title">Contexto del mercado</span>
           </div>
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:12}}>
+          <div style={{display:'flex',flexDirection:'column',gap:0,flex:1}}>
             {[
-              {label:'Total empresas', value:`${(summary.total_empresas/1000).toFixed(1)}k`},
-              {label:'Actividades',    value:summary.total_actividades},
-            ].map((s,i)=>(
-              <div key={i} className="db-stat-item">
-                <div className="db-stat-label">{s.label}</div>
-                <div className="db-stat-value" style={{fontSize:18}}>{s.value}</div>
+              {icon:'🏙️', label:'Medellín formal', desc:`${summary ? `${(summary.total_empresas/1000).toFixed(1)}k` : '—'} empresas registradas en el DANE — ciudad con alta formalización empresarial.`},
+              {icon:'📈', label:'Dinamismo sectorial', desc:`${summary ? summary.total_actividades : '—'} sectores económicos activos. Los servicios y el comercio dominan el mapa.`},
+              {icon:'🗺️', label:'Distribución comunal', desc:`${summary?.comuna_top?.nombre || 'El Centro'} lidera en concentración. Las zonas periféricas tienen menor competencia.`},
+            ].map((item,i)=>(
+              <div key={i} style={{display:'flex',gap:9,alignItems:'flex-start',flex:1,padding:'6px 0',borderBottom:i<2?'1px solid var(--sep)':'none'}}>
+                <span style={{fontSize:16,flexShrink:0,marginTop:2}}>{item.icon}</span>
+                <div>
+                  <div style={{fontSize:12,fontWeight:700,color:'var(--text-h)',marginBottom:2}}>{item.label}</div>
+                  <div style={{fontSize:11.5,color:'var(--text-mid)',lineHeight:1.45}}>{item.desc}</div>
+                </div>
               </div>
             ))}
           </div>
-          {/* Top comunas mini */}
-          <div style={{fontSize:11,fontWeight:700,letterSpacing:'.06em',textTransform:'uppercase',color:'var(--text-dim)',marginBottom:8}}>
-            Top comunas
+        </div>
+      </>
+    ),
+    emprendedor: null, // full-width
+    insights: (
+      <>
+        {panelEmprendedor}
+        <div className="db-rc" style={{flexShrink:0}}>
+          <div className="db-card-header" style={{marginBottom:10}}>
+            <span className="db-card-title">¿Cómo funciona?</span>
           </div>
-          {topComunas.map((item,i)=>(
-            <div key={i} style={{display:'flex',justifyContent:'space-between',alignItems:'center',fontSize:12.5,marginBottom:6,color:'var(--text)'}}>
-              <span>{item.comuna}</span>
-              <b style={{color:'var(--accent)'}}>{(item.total_empresas||0).toLocaleString('es-CO')}</b>
+          <div style={{display:'flex',flexDirection:'column',gap:10}}>
+            {[
+              {icon:'📊', title:'Actividad empresarial', desc:'Sectores con más empresas registradas en el DANE para detectar mercados en crecimiento.'},
+              {icon:'🛡️', title:'Índice de criminalidad', desc:'Datos de incidencia delictiva por zona, para evaluar el riesgo de seguridad de tu local.'},
+              {icon:'🎯', title:'Zonas de oportunidad', desc:'Cruce de ambas fuentes: alta actividad + baja criminalidad = mejor potencial para tu negocio.'},
+            ].map((item,i)=>(
+              <div key={i} style={{display:'flex',gap:9,alignItems:'flex-start'}}>
+                <span style={{fontSize:15,flexShrink:0,marginTop:1}}>{item.icon}</span>
+                <div>
+                  <div style={{fontSize:12,fontWeight:700,color:'var(--text-h)',marginBottom:2}}>{item.title}</div>
+                  <div style={{fontSize:11.5,color:'var(--text-mid)',lineHeight:1.45}}>{item.desc}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="db-rc" style={{flex:1,display:'flex',flexDirection:'column',minHeight:0}}>
+          <div className="db-card-header" style={{marginBottom:8,flexShrink:0}}>
+            <span className="db-card-title">Claves para analizar</span>
+          </div>
+          <div style={{display:'flex',flexDirection:'column',gap:0,flex:1}}>
+            {[
+              {num:'1', tip:'Filtra por año para ver si un sector está creciendo o estancándose en el tiempo.'},
+              {num:'2', tip:'La pestaña "Zonas" muestra dónde abrir con menos competencia y menos riesgo.'},
+              {num:'3', tip:'El sector líder tiene más demanda, pero también más competidores establecidos.'},
+              {num:'4', tip:'Usa "Sectores" para encontrar nichos de mercado con menor saturación.'},
+            ].map((item,i)=>(
+              <div key={i} style={{display:'flex',gap:10,alignItems:'flex-start',flex:1,padding:'6px 0',borderBottom:i<3?'1px solid var(--sep)':'none'}}>
+                <div style={{width:20,height:20,borderRadius:6,background:'var(--active-bg)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,fontWeight:800,color:'var(--accent)',flexShrink:0,marginTop:1}}>{item.num}</div>
+                <span style={{fontSize:11.5,color:'var(--text-mid)',lineHeight:1.45}}>{item.tip}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </>
+    ),
+    negocios: (
+      <>
+        {panelEmprendedor}
+        <div className="db-rc" style={{flexShrink:0}}>
+          <div className="db-card-header" style={{marginBottom:10}}>
+            <span className="db-card-title">¿Qué es Negocios?</span>
+          </div>
+          <div style={{fontSize:12.5,color:'var(--text-mid)',lineHeight:1.7,display:'flex',flexDirection:'column',gap:6}}>
+            <p style={{margin:0}}>Registros <b style={{color:'var(--text-h)'}}>reales</b> de negocios en Medellín, filtrados por comuna, categoría y período.</p>
+            <p style={{margin:0}}>Úsalo para conocer la <b style={{color:'var(--text-h)'}}>densidad de competidores</b> en tu zona objetivo.</p>
+          </div>
+        </div>
+        <div className="db-rc" style={{flex:1,display:'flex',flexDirection:'column',minHeight:0}}>
+          <div className="db-card-header" style={{marginBottom:8,flexShrink:0}}>
+            <span className="db-card-title">Cómo interpretar</span>
+          </div>
+          <div style={{display:'flex',flexDirection:'column',gap:0,flex:1}}>
+            {[
+              {n:'1', tip:'Filtra por tu comuna para ver solo la competencia en tu zona objetivo.'},
+              {n:'2', tip:'Compara categorías de negocio para detectar nichos con poca oferta.'},
+              {n:'3', tip:'Más barrios cubiertos en el resultado = mercado más diverso y distribuido.'},
+              {n:'4', tip:'Usa el período más reciente para datos actualizados del mercado local.'},
+            ].map(({n,tip},i)=>(
+              <div key={i} style={{display:'flex',gap:10,alignItems:'flex-start',flex:1,padding:'6px 0',borderBottom:i<3?'1px solid var(--sep)':'none'}}>
+                <div style={{width:20,height:20,borderRadius:6,background:'var(--active-bg)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,fontWeight:800,color:'var(--accent)',flexShrink:0,marginTop:1}}>{n}</div>
+                <span style={{fontSize:11.5,color:'var(--text-mid)',lineHeight:1.45}}>{tip}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </>
+    ),
+    cobertura: (
+      <>
+        {panelEmprendedor}
+        <div className="db-rc" style={{flexShrink:0}}>
+          <div className="db-card-header" style={{marginBottom:10}}>
+            <span className="db-card-title">Guía EPM</span>
+          </div>
+          <div style={{display:'flex',flexDirection:'column',gap:9}}>
+            {[
+              {servicio:'Energía eléctrica', rango:'$45k – $200k/mes', color:'#fbbf24'},
+              {servicio:'Acueducto',         rango:'$20k – $80k/mes',  color:'#60a5fa'},
+              {servicio:'Gas natural',       rango:'$15k – $60k/mes',  color:'#f87171'},
+            ].map(({servicio,rango,color})=>(
+              <div key={servicio} style={{display:'flex',alignItems:'center',gap:9}}>
+                <div style={{width:7,height:7,borderRadius:'50%',background:color,flexShrink:0}}/>
+                <div>
+                  <div style={{fontSize:12,fontWeight:600,color:'var(--text-h)',lineHeight:1.1}}>{servicio}</div>
+                  <div style={{fontSize:11,color,fontWeight:700}}>{rango}</div>
+                </div>
+              </div>
+            ))}
+            <div style={{fontSize:11,color:'var(--text-dim)',borderTop:'1px solid var(--sep)',paddingTop:8,lineHeight:1.5}}>
+              Valores estimados según estrato socioeconómico.
+            </div>
+          </div>
+        </div>
+        <div className="db-rc" style={{flex:1,display:'flex',flexDirection:'column',minHeight:0}}>
+          <div className="db-card-header" style={{marginBottom:8,flexShrink:0}}>
+            <span className="db-card-title">¿Para qué sirve?</span>
+          </div>
+          <div style={{display:'flex',flexDirection:'column',gap:0,flex:1}}>
+            {[
+              {n:'1', tip:'Estima el costo mensual de servicios públicos según el estrato de tu local.'},
+              {n:'2', tip:'Compara tarifas entre acueducto, gas y energía para planear tu presupuesto.'},
+              {n:'3', tip:'Analiza tendencias históricas de precios para anticipar variaciones de costos.'},
+              {n:'4', tip:'Proyecta los gastos operativos de tu negocio antes de firmar un arriendo.'},
+            ].map(({n,tip},i)=>(
+              <div key={i} style={{display:'flex',gap:10,alignItems:'flex-start',flex:1,padding:'6px 0',borderBottom:i<3?'1px solid var(--sep)':'none'}}>
+                <div style={{width:20,height:20,borderRadius:6,background:'var(--active-bg)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,fontWeight:800,color:'var(--accent)',flexShrink:0,marginTop:1}}>{n}</div>
+                <span style={{fontSize:11.5,color:'var(--text-mid)',lineHeight:1.45}}>{tip}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </>
+    ),
+  };
+  const rightCol = rightColByMod[mod];
+
+  /* ══ COL-L ══ */
+
+  // ── INICIO: datos reales con visualización innovadora ──
+  // Labels de posición de mercado según rank
+  const mktLabel = (i, total) => {
+    const pct = (total > 0 ? topActividades[i]?.total_empresas / total : 0);
+    if (i === 0) return {txt:'Sector líder', cls:''};
+    if (pct > 0.15) return {txt:'Muy activo', cls:''};
+    if (pct > 0.08) return {txt:'Activo', cls:'medio'};
+    return {txt:'Nicho', cls:'saturado'};
+  };
+  const totalEmpresas = topActividades.reduce((s,i)=>s+(i.total_empresas||0),0);
+
+  const inicioLeft = (
+    <>
+      {/* Stats principales */}
+      {summary && (
+        <div className="db-stat-row" style={{gridTemplateColumns:'repeat(4,1fr)',flexShrink:0}}>
+          {[
+            {label:'Empresas registradas', value:`${(summary.total_empresas/1000).toFixed(1)}k`, tooltip:'Total de empresas formalmente registradas en Medellín'},
+            {label:'Sectores activos',     value:summary.total_actividades, tooltip:'Tipos de actividades económicas únicas presentes en la ciudad'},
+            {label:'Comuna líder',         value:summary.comuna_top?.nombre||'N/A', small:true, tooltip:'La comuna con mayor concentración de empresas registradas'},
+            {label:'Tasa de formalidad',   value:'Alta', cls:'green', tooltip:'Medellín tiene una de las tasas de formalización empresarial más altas del país'},
+          ].map((s,i)=>(
+            <div key={i} className="db-stat-item" data-tooltip={s.tooltip}>
+              <div className="db-stat-label">{s.label}</div>
+              <div className={`db-stat-value ${s.cls||''}`} style={s.small?{fontSize:12,marginTop:3}:{fontSize:20}}>{s.value}</div>
             </div>
           ))}
         </div>
       )}
 
-      {/* Módulos disponibles */}
-      <div className="db-rc" style={{flexShrink:0}}>
-        <div className="db-card-header" style={{marginBottom:10}}>
-          <span className="db-card-title">Módulos activos</span>
+      {/* Sectores: lista 2 columnas, texto completo */}
+      <div style={{flexShrink:0}}>
+        <div style={{fontSize:11,fontWeight:700,letterSpacing:'.07em',textTransform:'uppercase',color:'var(--text-dim)',marginBottom:10}}>
+          Sectores económicos · Posición de mercado
         </div>
-        {[
-          {id:'emprendedor', icon:<Icons.Rocket/>,  label:'Asesor IA'},
-          {id:'insights',    icon:<Icons.Chart/>,   label:'Inteligencia'},
-          {id:'negocios',    icon:<Icons.Store/>,   label:'Negocios'},
-          {id:'cobertura',   icon:<Icons.Bolt/>,    label:'Cobertura EPM'},
-        ].map(item=>(
-          <button
-            key={item.id}
-            onClick={() => setMod(item.id)}
-            style={{
-              display:'flex',alignItems:'center',gap:10,width:'100%',
-              background:'transparent',border:'none',cursor:'pointer',
-              padding:'7px 0',borderBottom:'1px solid var(--sep)',
-              color:mod===item.id?'var(--accent)':'var(--text-mid)',
-              fontSize:13,fontWeight:mod===item.id?600:400,
-              fontFamily:'Inter,sans-serif',textAlign:'left',transition:'color .18s'
-            }}
-          >
-            <span style={{color:mod===item.id?'var(--accent)':'var(--text-dim)',width:16}}>{item.icon}</span>
-            {item.label}
-            {mod===item.id && <span style={{marginLeft:'auto',fontSize:10,color:'var(--accent)'}}>●</span>}
-          </button>
-        ))}
-      </div>
-    </>
-  );
-
-  /* ══ COL-L ══ */
-
-  // ── INICIO: overview real ──
-  const inicioLeft = (
-    <>
-      <div className="db-filter-bar">
-        <button type="button" className="db-fpill" onClick={()=>setMod('emprendedor')}><span className="db-dot"/>Abre Tu Negocio</button>
-        <button type="button" className="db-fpill" onClick={()=>setMod('insights')}>Inteligencia</button>
-        <button type="button" className="db-fpill" onClick={()=>setMod('negocios')}>Negocios</button>
-        <div className="db-fset"><Icons.Sliders/></div>
-        <button className="db-btn-primary" onClick={()=>setMod('emprendedor')}>Consultar Asesor IA →</button>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+          {topActividades.length === 0 ? (
+            <div style={{fontSize:12,color:'var(--text-dim)',gridColumn:'1/-1'}}>Cargando sectores...</div>
+          ) : topActividades.map((item,i)=>{
+            const lbl = mktLabel(i, totalEmpresas);
+            return (
+              <div key={i} className="db-sector-tile"
+                data-tooltip={`${(item.total_empresas||0).toLocaleString('es-CO')} empresas · Zona: ${item.top_comuna||'N/A'} · CIIU ${item.ciiu}`}
+                style={{padding:'10px 12px',gap:6}}
+              >
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:2}}>
+                  <span className={`db-sector-label${lbl.cls?' '+lbl.cls:''}`} style={{fontSize:9}}>{lbl.txt}</span>
+                  <div className="db-sector-rank" style={{fontSize:10,width:18,height:18,borderRadius:5}}>{i+1}</div>
+                </div>
+                <div style={{fontSize:12,fontWeight:600,color:'var(--text-h)',lineHeight:1.4}}>{item.descripcion}</div>
+                <div style={{fontSize:10.5,color:'var(--text-dim)',marginTop:2}}>{(item.total_empresas||0).toLocaleString('es-CO')} emp · {item.top_comuna||'—'}</div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Chatbot como feature principal */}
-      <div className="db-card" style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
-        <div className="db-card-header">
-          <div>
-            <div className="db-card-title">Asesor de Negocios — Consultor IA</div>
-            <div className="db-card-subtitle">Análisis de viabilidad · Recomendaciones de zona · Datos reales EPM y empresariales</div>
+      {/* Comunas: ranking visual compacto */}
+      {topComunas.length > 0 && (
+        <div className="db-card" style={{padding:'16px 20px',flexShrink:0}}>
+          <div style={{fontSize:11,fontWeight:700,letterSpacing:'.07em',textTransform:'uppercase',color:'var(--text-dim)',marginBottom:12}}>
+            Ranking de comunas por actividad empresarial
           </div>
-          <div style={{
-            background:'var(--active-bg)', border:'1px solid var(--active-bd)',
-            borderRadius:6, padding:'3px 8px', fontSize:11, fontWeight:700, color:'var(--accent)'
-          }}>IA</div>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:8}}>
+            {topComunas.map((item,i)=>{
+              const intensity = Math.max(0.12, 0.5 - i * 0.08);
+              return (
+                <div key={i} className="db-commune-cell" data-tooltip={`${(item.total_empresas||0).toLocaleString('es-CO')} empresas registradas`}
+                  style={{
+                    borderRadius:10,padding:'10px 8px',textAlign:'center',cursor:'default',
+                    background:`rgba(0,200,150,${intensity})`,
+                    border:`1px solid rgba(0,200,150,${intensity+0.2})`,
+                  }}
+                >
+                  <div className="db-commune-rank" style={{fontSize:9,fontWeight:700,color:'rgba(0,200,150,.85)',marginBottom:3}}>#{i+1}</div>
+                  <div className="db-commune-name" style={{fontSize:11.5,fontWeight:700,color:'var(--text-h)',lineHeight:1.2}}>{item.comuna}</div>
+                  <div className="db-commune-count" style={{fontSize:10,color:'var(--text-mid)',marginTop:3}}>{(item.total_empresas||0).toLocaleString('es-CO')}</div>
+                </div>
+              );
+            })}
+          </div>
         </div>
-        <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
-          <ChatEmprendedor conversationId={convId} onConversationChange={setConvId}/>
-        </div>
-      </div>
+      )}
 
-      {/* Módulos de datos */}
-      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,flexShrink:0}}>
-        {[
-          { icon:<Icons.Chart/>, title:'Inteligencia Empresarial', desc:'Actividad económica por zona cruzada con datos de seguridad.', action:()=>setMod('insights') },
-          { icon:<Icons.Store/>, title:'Negocios y Cobertura',    desc:'Negocios cercanos, cobertura EPM y tarifas por estrato.',       action:()=>setMod('negocios') },
-        ].map((item,i)=>(
-          <button
-            key={i}
-            type="button"
-            className="db-card db-card-action"
-            onClick={item.action}
-            aria-label={`Abrir módulo ${item.title}`}
-            style={{cursor:'pointer',padding:'16px 18px',display:'flex',alignItems:'flex-start',gap:14,textAlign:'left'}}
-          >
-            <div style={{
-              width:38,height:38,borderRadius:10,background:'var(--active-bg)',
-              display:'flex',alignItems:'center',justifyContent:'center',
-              color:'var(--accent)',flexShrink:0
-            }}>
-              {item.icon}
+      {/* Distribución del mercado */}
+      {topActividades.length > 0 && (
+        <div className="db-card" style={{flex:1,padding:'14px 18px',minHeight:0,display:'flex',flexDirection:'column',justifyContent:'center',gap:10}}>
+          <div style={{fontSize:11,fontWeight:700,letterSpacing:'.07em',textTransform:'uppercase',color:'var(--text-dim)'}}>
+            Distribución del mercado por sector
+          </div>
+          {/* Stacked bar */}
+          <div style={{height:10,borderRadius:6,display:'flex',overflow:'hidden',gap:1}}>
+            {topActividades.slice(0,4).map((item,i)=>{
+              const pct = totalEmpresas > 0 ? ((item.total_empresas||0)/totalEmpresas*100) : 0;
+              const colors = ['#00C896','#239677','#60a5fa','#f59e0b'];
+              return <div key={i} style={{width:`${pct}%`,background:colors[i],transition:'width .4s'}}/>;
+            })}
+            <div style={{flex:1,background:'rgba(255,255,255,.07)'}}/>
+          </div>
+          {/* Legend */}
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'4px 14px'}}>
+            {topActividades.slice(0,4).map((item,i)=>{
+              const pct = totalEmpresas > 0 ? ((item.total_empresas||0)/totalEmpresas*100) : 0;
+              const colors = ['#00C896','#239677','#60a5fa','#f59e0b'];
+              const short = item.descripcion.length > 40 ? item.descripcion.slice(0,38)+'…' : item.descripcion;
+              return (
+                <div key={i} style={{display:'flex',alignItems:'center',gap:7}} data-tooltip={`${item.descripcion} · ${pct.toFixed(1)}% del mercado`}>
+                  <div style={{width:8,height:8,borderRadius:2,background:colors[i],flexShrink:0}}/>
+                  <span style={{fontSize:11,color:'var(--text-mid)',lineHeight:1.3,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{short}</span>
+                  <span style={{fontSize:11,fontWeight:700,color:'var(--text-h)',flexShrink:0}}>{pct.toFixed(1)}%</span>
+                </div>
+              );
+            })}
+          </div>
+          {totalEmpresas > 0 && (
+            <div style={{fontSize:10.5,color:'var(--text-dim)',borderTop:'1px solid var(--sep)',paddingTop:8}}>
+              Los 4 sectores principales concentran el {topActividades.slice(0,4).reduce((s,i)=>s+(i.total_empresas||0),0)/totalEmpresas*100|0}% del total de {(totalEmpresas/1000).toFixed(1)}k empresas registradas.
             </div>
-            <div>
-              <div style={{fontSize:14,fontWeight:700,color:'var(--text-h)',marginBottom:4}}>{item.title}</div>
-              <div style={{fontSize:12.5,color:'var(--text-mid)',lineHeight:1.5}}>{item.desc}</div>
-              <div style={{fontSize:11,color:'var(--accent)',fontWeight:600,marginTop:6}}>Ver datos →</div>
-            </div>
-          </button>
-        ))}
-      </div>
+          )}
+        </div>
+      )}
     </>
   );
 
-  // ── EMPRENDEDOR: chat + historial, solo eso ──
+  // ── EMPRENDEDOR: chat + historial, full-width ──
   const emprendedorLeft = (
     <div className="db-card" style={{flex:1,display:'flex',overflow:'hidden',padding:0}}>
       <ConvList
+        refreshKey={convListKey}
         currentId={convId}
         onSelect={setConvId}
         onNew={() => setConvId(null)}
@@ -761,49 +999,52 @@ export default function EmprendedorDashboard() {
           <div className="db-card-subtitle">Análisis de viabilidad · Recomendaciones de zona · Costos EPM</div>
         </div>
         <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
-          <ChatEmprendedor conversationId={convId} onConversationChange={setConvId}/>
+          <ChatEmprendedor conversationId={convId} onConversationChange={handleConversationChange}/>
         </div>
       </div>
     </div>
   );
 
-  // ── INSIGHTS: solo datos ──
+  // ── INSIGHTS: tabs internas, sin scroll ──
   const insightsLeft = (
-    <div className="db-card" style={{flex:1,overflowY:'auto'}}>
-      <div className="db-card-header">
+    <div className="db-card" style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
+      <div className="db-card-header" style={{flexShrink:0}}>
         <div>
           <div className="db-card-title">Inteligencia Empresarial</div>
-          <div className="db-card-subtitle">Top actividades · Comunas · Datos cruzados con seguridad</div>
+          <div className="db-card-subtitle">Actividad económica cruzada con índice de seguridad por zona</div>
         </div>
       </div>
-      <InsightsWidget/>
+      <div style={{flex:1,padding:'0 22px 16px',minHeight:0,display:'flex',flexDirection:'column'}}>
+        <InsightsWidget/>
+      </div>
     </div>
   );
 
-  // ── NEGOCIOS: tabs Negocios | Cobertura ──
+  // ── NEGOCIOS: solo datos de negocios (cobertura tiene su propio módulo) ──
   const negociosLeft = (
     <div className="db-card" style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
-      <TabBar
-        tabs={[{id:'negocios',label:'Negocios Cercanos'},{id:'cobertura',label:'Cobertura y Tarifas'}]}
-        active={negTab} onChange={setNegTab}
-      />
-      <div className="db-tab-content" style={{flex:1,overflow:'auto'}}>
-        {negTab==='negocios'  && <NegociosWidget/>}
-        {negTab==='cobertura' && <CoberturaWidget/>}
+      <div style={{padding:'16px 22px 12px',flexShrink:0,borderBottom:'1px solid var(--sep)'}}>
+        <div className="db-card-title" style={{fontSize:16}}>Negocios del mercado local</div>
+        <div className="db-card-subtitle">Negocios registrados en Medellín · Filtra por comuna, categoría y período</div>
+      </div>
+      <div style={{flex:1,padding:'14px 22px 16px',display:'flex',flexDirection:'column',minHeight:0}}>
+        <NegociosWidget/>
       </div>
     </div>
   );
 
   // ── COBERTURA standalone ──
   const coberturaLeft = (
-    <div className="db-card" style={{flex:1,overflowY:'auto'}}>
-      <div className="db-card-header">
+    <div className="db-card" style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
+      <div className="db-card-header" style={{flexShrink:0}}>
         <div>
-          <div className="db-card-title">Cobertura y Tarifas EPM</div>
+          <div className="db-card-title" style={{fontSize:16}}>Cobertura y Tarifas EPM</div>
           <div className="db-card-subtitle">Estratificación · Servicios públicos · Tendencias de tarifas</div>
         </div>
       </div>
-      <CoberturaWidget/>
+      <div style={{flex:1,padding:'0 22px 16px',minHeight:0,display:'flex',flexDirection:'column'}}>
+        <CoberturaWidget/>
+      </div>
     </div>
   );
 

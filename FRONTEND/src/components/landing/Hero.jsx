@@ -31,7 +31,7 @@ export default function Hero() {
           <div className="mk">
             <div className="mk-top">
               <div className="mk-logo-row">
-                <img src="/mecialogo.png" alt="MECIA" style={{ height: '22px', width: 'auto' }} />
+                <img src="/mecialogoog.png" alt="MECIA" style={{ height: '22px', width: 'auto' }} />
                 MECIA
               </div>
               <div className="mk-search">

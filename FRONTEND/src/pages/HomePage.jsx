@@ -37,7 +37,7 @@ export default function HomePage() {
       {/* ══ NAVBAR ══ */}
       <header id="nav">
         <Link className="logo" to="/">
-          <img src="/mecialogo.png" alt="MECIA" style={{ height: '36px', width: 'auto' }} />
+          <img src="/mecialogoog.png" alt="MECIA" style={{ height: '36px', width: 'auto' }} />
         </Link>
         <nav className="nav-links">
           <a href="#" className="active">Inicio</a>
