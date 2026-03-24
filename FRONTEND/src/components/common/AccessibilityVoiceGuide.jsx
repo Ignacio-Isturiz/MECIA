@@ -130,7 +130,7 @@ export default function AccessibilityVoiceGuide() {
   }, []);
 
   return (
-    <div style={{ position: "fixed", right: "1rem", bottom: "1rem", zIndex: 9999, display: "flex", gap: "0.5rem" }}>
+    <div style={{ position: "fixed", right: "1.5rem", bottom: "5.5rem", zIndex: 9999, display: "flex", gap: "0.5rem" }}>
       <button
         type="button"
         onClick={() => setEnabled((prev) => !prev)}

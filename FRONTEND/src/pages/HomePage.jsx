@@ -83,6 +83,20 @@ export default function HomePage() {
         </div>
       </header>
 
+      {/* ══ TELEGRAM FLOATING BUTTON ══ */}
+      <a
+        href="https://t.me/MECIA_bot"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="tg-fab"
+        aria-label="Abrir bot de Telegram"
+      >
+        <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.93 6.793-1.784 8.4c-.13.58-.47.72-.953.45l-2.63-1.938-1.27 1.22c-.14.14-.258.258-.527.258l.188-2.676 4.863-4.393c.21-.188-.047-.293-.327-.105L7.93 14.47l-2.598-.813c-.565-.177-.577-.565.118-.836l10.155-3.914c.47-.17.882.115.726.886z"/>
+        </svg>
+        <span className="tg-fab-label">Bot de Telegram</span>
+      </a>
+
       {/* ══ SECTIONS ══ */}
       <Hero />
       <TrustedLogos />
