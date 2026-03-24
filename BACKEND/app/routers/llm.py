@@ -1,4 +1,4 @@
-"""Endpoints de LLM: mock, seguridad, análisis de facturas y historial de conversaciones."""
+"""Endpoints de LLM: análisis de modelos, seguridad, análisis de facturas e historial de conversaciones."""
 
 from pydantic import BaseModel, Field
 from typing import Optional
@@ -18,7 +18,7 @@ from app.models.user import User
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/llm", tags=["llm-mock"])
+router = APIRouter(prefix="/api/llm", tags=["llm"])
 
 
 class SimulateChatRequest(BaseModel):
@@ -49,38 +49,38 @@ class TextToSpeechRequest(BaseModel):
 @router.get(
     "/models",
     status_code=status.HTTP_200_OK,
-    summary="Listar modelos LLM simulados"
+    summary="Listar modelos LLM disponibles"
 )
-async def list_mock_models():
+async def list_models():
     try:
         service = LLMMockService()
         return {"success": True, "data": service.list_models(), "count": len(service.list_models())}
     except Exception as e:
-        logger.error(f"Error listando modelos simulados: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error listando modelos simulados")
+        logger.error(f"Error listando modelos LLM: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error listando modelos LLM")
 
 
 @router.post(
-    "/simulate/chat",
+    "/chat",
     status_code=status.HTTP_200_OK,
-    summary="Simular respuesta de chat LLM"
+    summary="Consultar modelo LLM"
 )
-async def simulate_chat(payload: SimulateChatRequest):
+async def chat(payload: SimulateChatRequest):
     try:
         service = LLMMockService()
         result = service.simulate_chat(prompt=payload.prompt, model=payload.model)
         return {"success": True, "data": result}
     except Exception as e:
-        logger.error(f"Error simulando chat LLM: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error simulando chat LLM")
+        logger.error(f"Error en consulta a modelo LLM: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error procesando consulta al modelo LLM")
 
 
 @router.post(
-    "/simulate/recommendation",
+    "/recommendation",
     status_code=status.HTTP_200_OK,
-    summary="Simular recomendacion de zona con LLM"
+    summary="Obtener recomendación de zona para negocio"
 )
-async def simulate_recommendation(payload: SimulateRecommendationRequest):
+async def recommendation(payload: SimulateRecommendationRequest):
     try:
         service = LLMMockService()
         result = service.simulate_zone_recommendation(
@@ -89,8 +89,8 @@ async def simulate_recommendation(payload: SimulateRecommendationRequest):
         )
         return {"success": True, "data": result}
     except Exception as e:
-        logger.error(f"Error simulando recomendacion LLM: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error simulando recomendacion LLM")
+        logger.error(f"Error al generar recomendación: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error procesando recomendación de zona")
 
 
 @router.post(

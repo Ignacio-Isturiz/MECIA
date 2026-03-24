@@ -1,14 +1,14 @@
 import { API_CONFIG, getAuthHeaders } from "../config/api";
 
 export const llmService = {
-  async getMockModels() {
+  async getModels() {
     const response = await fetch(`${API_CONFIG.baseURL}/api/llm/models`);
     if (!response.ok) throw new Error(`Error ${response.status}: ${response.statusText}`);
     return response.json();
   },
 
-  async simulateChat({ prompt, model = "gpt-4o-mini-sim" }) {
-    const response = await fetch(`${API_CONFIG.baseURL}/api/llm/simulate/chat`, {
+  async chat({ prompt, model = "gpt-4o-mini-sim" }) {
+    const response = await fetch(`${API_CONFIG.baseURL}/api/llm/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ prompt, model }),
@@ -18,8 +18,8 @@ export const llmService = {
     return response.json();
   },
 
-  async simulateRecommendation({ business_type, comuna = null }) {
-    const response = await fetch(`${API_CONFIG.baseURL}/api/llm/simulate/recommendation`, {
+  async recommendation({ business_type, comuna = null }) {
+    const response = await fetch(`${API_CONFIG.baseURL}/api/llm/recommendation`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ business_type, comuna }),
@@ -105,9 +105,10 @@ export const llmService = {
     return response.json();
   },
 
-  async textToSpeech({ text, voice = "alloy", language = "es" }) {
+  async textToSpeech({ text, voice = "alloy", language = "es", signal = undefined }) {
     const response = await fetch(`${API_CONFIG.baseURL}/api/llm/tts`, {
       method: "POST",
+      signal,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text, voice, language }),
     });
